@@ -3,10 +3,7 @@
  * F_prime.
  */
 export class FieldElement {
-  public num: bigint;
-  public prime: bigint;
-
-  constructor(num: bigint, prime: bigint) {
+  constructor(readonly num: bigint, readonly prime: bigint) {
     if (num >= prime || num < 0n) {
       throw new Error(`Num ${num} not in field range 0 ${prime - 1n}`);
     }
