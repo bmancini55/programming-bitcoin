@@ -10,29 +10,55 @@ describe("FieldElement", () => {
     });
   });
 
-  describe(".equals()", () => {
+  describe(".eq()", () => {
     it("should return false for undefined", () => {
       const a = new FieldElement(7n, 13n);
       const b = undefined;
-      expect(a.equals(b)).to.equal(false);
+      expect(a.eq(b)).to.equal(false);
     });
 
     it("should return true for equal", () => {
       const a = new FieldElement(7n, 13n);
       const b = new FieldElement(7n, 13n);
-      expect(a.equals(b)).to.equal(true);
+      expect(a.eq(b)).to.equal(true);
     });
 
     it("should return false for different num", () => {
       const a = new FieldElement(7n, 13n);
       const b = new FieldElement(8n, 13n);
-      expect(a.equals(b)).to.equal(false);
+      expect(a.eq(b)).to.equal(false);
     });
 
     it("should return false for different prime", () => {
       const a = new FieldElement(7n, 13n);
       const b = new FieldElement(7n, 17n);
-      expect(a.equals(b)).to.equal(false);
+      expect(a.eq(b)).to.equal(false);
+    });
+  });
+
+  describe(".neq()", () => {
+    it("should return true for undefined", () => {
+      const a = new FieldElement(7n, 13n);
+      const b = undefined;
+      expect(a.neq(b)).to.equal(true);
+    });
+
+    it("should return false for equal", () => {
+      const a = new FieldElement(7n, 13n);
+      const b = new FieldElement(7n, 13n);
+      expect(a.neq(b)).to.equal(false);
+    });
+
+    it("should return true for different num", () => {
+      const a = new FieldElement(7n, 13n);
+      const b = new FieldElement(8n, 13n);
+      expect(a.neq(b)).to.equal(true);
+    });
+
+    it("should return false for different prime", () => {
+      const a = new FieldElement(7n, 13n);
+      const b = new FieldElement(7n, 17n);
+      expect(a.neq(b)).to.equal(true);
     });
   });
 
@@ -133,6 +159,20 @@ describe("FieldElement", () => {
       const a = new FieldElement(7n, 13n);
       const e = -3n;
       expect(a.pow(e)).to.deep.equal(new FieldElement(8n, 13n));
+    });
+  });
+
+  describe(".smul()", () => {
+    it("should multiply by zero", () => {
+      const a = new FieldElement(7n, 13n);
+      const b = 0n;
+      expect(a.smul(b)).to.deep.equal(new FieldElement(0n, 13n));
+    });
+
+    it("should multiply scalar", () => {
+      const a = new FieldElement(7n, 13n);
+      const b = 3n;
+      expect(a.smul(b)).to.deep.equal(new FieldElement(8n, 13n));
     });
   });
 });

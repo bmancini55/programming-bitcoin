@@ -1,8 +1,10 @@
+import { IOperable } from "./Operable";
+
 /**
  * Represents a finite field element which represents an elmement in the field
  * F_prime.
  */
-export class FieldElement {
+export class FieldElement implements IOperable<FieldElement> {
   constructor(readonly num: bigint, readonly prime: bigint) {
     if (num >= prime || num < 0n) {
       throw new Error(`Num ${num} not in field range 0 ${prime - 1n}`);
@@ -15,9 +17,23 @@ export class FieldElement {
     return `FieldElement_${this.prime}(${this.num})`;
   }
 
-  public equals(other: FieldElement) {
+  /**
+   * Returns true when the other field element is equal to the
+   * current field element
+   * @param other
+   */
+  public eq(other: FieldElement): boolean {
     if (!other) return false;
     return this.prime === other.prime && this.num === other.num;
+  }
+
+  /**
+   * Returns true when the other field element is not equal to the
+   * current field element
+   * @param other
+   */
+  public neq(other: FieldElement): boolean {
+    return !this.eq(other);
   }
 
   /**
@@ -51,6 +67,14 @@ export class FieldElement {
     return new FieldElement(num, this.prime);
   }
 
+  /**
+   * Multiplies two field elements together using the formula:
+   *
+   * ```
+   * (a * b) % p
+   * ```
+   * @param other
+   */
   public mul(other: FieldElement): FieldElement {
     if (this.prime !== other.prime) {
       throw new Error(`Cannot multiply two numbers in different Fields`);
@@ -91,6 +115,15 @@ export class FieldElement {
   public pow(exponent: bigint): FieldElement {
     exponent = (exponent + this.prime - 1n) % (this.prime - 1n); // fixes negative mod bug
     const num = this.num ** exponent % this.prime;
+    return new FieldElement(num, this.prime);
+  }
+
+  /**
+   * Scalar multiple, which is the same as multiplier
+   * @param scalar
+   */
+  public smul(scalar: bigint): FieldElement {
+    const num = (this.num * scalar) % this.prime;
     return new FieldElement(num, this.prime);
   }
 }
