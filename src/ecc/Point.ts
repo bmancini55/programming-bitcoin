@@ -104,4 +104,21 @@ export class Point<T> {
       return new Point(x, y, this.a, this.b);
     }
   }
+
+  /**
+   * Scalar multiply a point using binary expansion
+   * @param scalar
+   */
+  public smul(scalar: bigint): Point<T> {
+    let current: Point<T> = this;
+    let result = new Point<T>(undefined, undefined, this.a, this.b);
+    while (scalar) {
+      if (scalar & 1n) {
+        result = result.add(current);
+      }
+      current = current.add(current);
+      scalar = scalar >> 1n;
+    }
+    return result;
+  }
 }
