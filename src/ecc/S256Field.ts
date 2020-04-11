@@ -1,4 +1,5 @@
 import { FieldElement } from "./FieldElement";
+import { pow } from "../util/BigIntMath";
 
 /**
  * Defines a subclass of a finite field for use with secp256k1. This
@@ -18,5 +19,18 @@ export class S256Field extends FieldElement {
 
   constructor(num: bigint) {
     super(num, S256Field.P);
+  }
+
+  /**
+   * Calculate the sqrt of the finite field which is possible because `p % 4 = 3`.
+   * The formula for this is:
+   *
+   * ```
+   * v ** ((P + 1) / 4)
+   * ```
+   */
+  public sqrt(): S256Field {
+    const r = this.pow((S256Field.P + 1n) / 4n);
+    return new S256Field(r.num);
   }
 }
