@@ -2,7 +2,7 @@ import { Point } from "./Point";
 import { S256Field } from "./S256Field";
 import { mod, pow } from "../util/BigIntMath";
 import { Signature } from "./Signature";
-import { toBuffer, fromBuffer } from "../util/BigIntUtil";
+import { bigToBuf, bigFromBuf } from "../util/BigIntUtil";
 import { hash160 } from "../util/Hash160";
 import { encodeBase58Check } from "../util/Base58";
 import { combine } from "../util/BufferUtil";
@@ -53,14 +53,14 @@ export class S256Point extends Point<S256Field> {
   public static parse(buf: Buffer): S256Point {
     // uncompressed point
     if (buf[0] === 0x04) {
-      const x = fromBuffer(buf.slice(1, 33));
-      const y = fromBuffer(buf.slice(33, 65));
+      const x = bigFromBuf(buf.slice(1, 33));
+      const y = bigFromBuf(buf.slice(33, 65));
       return new S256Point(x, y);
     }
     // compressed format
     else {
       // x is easy to get
-      const x = new S256Field(fromBuffer(buf.slice(1)));
+      const x = new S256Field(bigFromBuf(buf.slice(1)));
 
       // right side of equation y^2 = x^3 +7
       const right = x.pow(3n).add(new S256Field(S256Point.b)); // prettier-ignore
@@ -160,13 +160,13 @@ export class S256Point extends Point<S256Field> {
       const prefix = this.y.num % 2n === 0n ? 2 : 3;
       return Buffer.concat([
           Buffer.from([prefix]),
-          toBuffer(this.x.num)
+          bigToBuf(this.x.num)
         ]); // prettier-ignore
     } else {
       return Buffer.concat([
         Buffer.from([0x04]),
-        toBuffer(this.x.num),
-        toBuffer(this.y.num),
+        bigToBuf(this.x.num),
+        bigToBuf(this.y.num),
       ]);
     }
   }

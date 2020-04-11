@@ -1,4 +1,4 @@
-import { fromBuffer } from "./BigIntUtil";
+import { bigFromBuf } from "./BigIntUtil";
 import { divmod } from "./BigIntMath";
 import { hash256 } from "./Hash256";
 import { combine } from "./BufferUtil";
@@ -26,7 +26,7 @@ export function encodeBase58(buf: Buffer) {
   }
 
   // determine what base58 digit to use
-  let num = fromBuffer(buf);
+  let num = bigFromBuf(buf);
   let result = "";
   while (num > 0n) {
     const [n, mod] = divmod(num, 58n);

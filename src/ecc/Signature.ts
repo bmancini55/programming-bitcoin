@@ -1,5 +1,5 @@
 import { S256Field } from "./S256Field";
-import { toBuffer } from "../util/BigIntUtil";
+import { bigToBuf } from "../util/BigIntUtil";
 import * as bufutil from "../util/BufferUtil";
 
 /**
@@ -30,7 +30,7 @@ export class Signature {
   public der() {
     const encodePart = (v: bigint) => {
       // convert bigint to buffer
-      let bytes = toBuffer(v);
+      let bytes = bigToBuf(v);
 
       // remove leading null bytes
       bytes = bufutil.lstrip(bytes, 0x00);

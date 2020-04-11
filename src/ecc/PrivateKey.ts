@@ -3,7 +3,7 @@ import { pow, mod } from "../util/BigIntMath";
 import { Signature } from "./Signature";
 import * as bigint from "../util/BigIntUtil";
 import crypto from "crypto";
-import { toBuffer } from "../util/BigIntUtil";
+import { bigToBuf } from "../util/BigIntUtil";
 import { encodeBase58, encodeBase58Check } from "../util/Base58";
 import { combine } from "../util/BufferUtil";
 
@@ -47,8 +47,8 @@ export class PrivateKey {
       z -= S256Point.N;
     }
 
-    const zbytes = bigint.toBuffer(z);
-    const sbytes = bigint.toBuffer(this.secret);
+    const zbytes = bigint.bigToBuf(z);
+    const sbytes = bigint.bigToBuf(this.secret);
 
     const h = "sha256";
 
@@ -65,7 +65,7 @@ export class PrivateKey {
 
     while (true) {
       v = crypto.createHmac(h, k).update(v).digest();
-      const candidate = bigint.fromBuffer(v);
+      const candidate = bigint.bigFromBuf(v);
       if (candidate >= 1n && candidate < S256Point.N) {
         return candidate;
       }
@@ -104,7 +104,7 @@ export class PrivateKey {
     const prefix = Buffer.from([testnet ? 0xef : 0x80]);
 
     // 2. encode as 32-byte big-endian number
-    const secret = toBuffer(this.secret, 32);
+    const secret = bigToBuf(this.secret, 32);
 
     // 3. suffix
     const suffix = compressed ? Buffer.from([0x01]) : Buffer.alloc(0);
