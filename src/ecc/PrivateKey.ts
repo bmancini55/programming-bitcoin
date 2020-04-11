@@ -3,6 +3,9 @@ import { pow, mod } from "../util/BigIntMath";
 import { Signature } from "./Signature";
 import * as bigint from "../util/BigIntUtil";
 import crypto from "crypto";
+import { toBuffer } from "../util/BigIntUtil";
+import { encodeBase58, encodeBase58Check } from "../util/Base58";
+import { combine } from "../util/BufferUtil";
 
 export class PrivateKey {
   public point: S256Point;
@@ -73,5 +76,40 @@ export class PrivateKey {
         .digest();
       v = crypto.createHmac(h, k).update(v).digest();
     }
+  }
+
+  /**
+   * Encodes a private key using the WIF format. Can encode with compressed
+   * or uncompressed format and can be for testnet or mainnet.
+   *
+   * Mainnet prefix: 0x80
+   * Testnet prefix: 0xef
+   *
+   * Algorithm for WIF is:
+   * 1. Start with the prefix
+   * 2. Encode the secret in 32-byte big-endian format
+   * 3. If the SEC format used for the public key address was compressed add
+   *    a suffix of 0x01
+   * 4. Combine wthe prefix from #1, serialized secret from #2, and suffix from #3
+   * 5. Do hash256 of the result from #4 and get the first 4 bytes
+   * 6. Take the combination of #4 and #5 and encode it with Base58
+   *
+   * Note that steps 5 and 6 can be comined with the use of `encodeBase58Check`.
+   *
+   * @param compressed default of true
+   * @param testnet default of false
+   */
+  public wif(compressed: boolean = true, testnet: boolean = false) {
+    // 1. prefix
+    const prefix = Buffer.from([testnet ? 0xef : 0x80]);
+
+    // 2. encode as 32-byte big-endian number
+    const secret = toBuffer(this.secret, 32);
+
+    // 3. suffix
+    const suffix = compressed ? Buffer.from([0x01]) : Buffer.alloc(0);
+
+    // 4. combine 1, 2, and 3
+    return encodeBase58Check(combine(prefix, secret, suffix));
   }
 }
