@@ -1,4 +1,5 @@
 import { IOperable } from "./Operable";
+import { mod } from "../util/BigIntMath";
 
 /**
  * Represents a finite field element which represents an elmement in the field
@@ -44,7 +45,7 @@ export class FieldElement implements IOperable {
     if (this.prime !== other.prime) {
       throw new Error(`Cannot addd two numbers in different Fields`);
     }
-    const num = (this.num + other.num) % this.prime;
+    const num = mod(this.num + other.num, this.prime);
     return new FieldElement(num, this.prime);
   }
 
@@ -62,8 +63,7 @@ export class FieldElement implements IOperable {
     if (this.prime !== other.prime) {
       throw new Error(`Cannot add two numbers in different Fields`);
     }
-    let num = (this.num - other.num) % this.prime;
-    num = (num + this.prime) % this.prime; // fixes negative mod bug
+    const num = mod(this.num - other.num, this.prime);
     return new FieldElement(num, this.prime);
   }
 
@@ -79,8 +79,7 @@ export class FieldElement implements IOperable {
     if (this.prime !== other.prime) {
       throw new Error(`Cannot multiply two numbers in different Fields`);
     }
-
-    const num = (this.num * other.num) % this.prime;
+    const num = mod(this.num * other.num, this.prime);
     return new FieldElement(num, this.prime);
   }
 
@@ -97,7 +96,7 @@ export class FieldElement implements IOperable {
     if (this.prime !== other.prime) {
       throw new Error(`Cannot divide two numbers in different Fields`);
     }
-    const num = (this.num * other.num ** (this.prime - 2n)) % this.prime;
+    const num = mod(this.num * other.num ** (this.prime - 2n), this.prime);
     return new FieldElement(num, this.prime);
   }
 
@@ -114,7 +113,7 @@ export class FieldElement implements IOperable {
    */
   public pow(exponent: bigint): FieldElement {
     exponent = (exponent + this.prime - 1n) % (this.prime - 1n); // fixes negative mod bug
-    const num = this.num ** exponent % this.prime;
+    const num = mod(this.num ** exponent, this.prime);
     return new FieldElement(num, this.prime);
   }
 
@@ -123,7 +122,7 @@ export class FieldElement implements IOperable {
    * @param scalar
    */
   public smul(scalar: bigint): FieldElement {
-    const num = (this.num * scalar) % this.prime;
+    const num = mod(this.num * scalar, this.prime);
     return new FieldElement(num, this.prime);
   }
 }
