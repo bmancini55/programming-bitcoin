@@ -127,4 +127,24 @@ describe("S256Point", () => {
       }
     });
   });
+
+  describe(".address()", () => {
+    it("5002 uncompressed SEC on testnet", () => {
+      const pk = new PrivateKey(5002n);
+      const a = pk.point.address(false, true);
+      expect(a).to.equal("mmTPbXQFxboEtNRkwfh6K51jvdtHLxGeMA");
+    });
+
+    it("2020^5 compressed SEC on testnet", () => {
+      const pk = new PrivateKey(2020n ** 5n);
+      const a = pk.point.address(true, true);
+      expect(a).to.equal("mopVkxp8UhXqRYbCYJsbeE1h1fiF64jcoH");
+    });
+
+    it("0x12345deadbeef compressed SEC on mainnet", () => {
+      const pk = new PrivateKey(BigInt(0x12345deadbeef));
+      const a = pk.point.address(true, false);
+      expect(a).to.equal("1F1Pn2y6pDb68E5nYJJeba4TLg2U7B6KF1");
+    });
+  });
 });

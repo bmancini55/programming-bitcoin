@@ -8,3 +8,11 @@ export function lstrip(buf: Buffer, match: number) {
   }
   return Buffer.alloc(0);
 }
+
+/**
+ * Combines buffers together in the provided order
+ * @param buf
+ */
+export function combine(...buf: Buffer[]): Buffer {
+  return Buffer.concat(buf);
+}
