@@ -4,7 +4,7 @@ import { IOperable } from "./Operable";
  * Represents a finite field element which represents an elmement in the field
  * F_prime.
  */
-export class FieldElement implements IOperable<FieldElement> {
+export class FieldElement implements IOperable {
   constructor(readonly num: bigint, readonly prime: bigint) {
     if (num >= prime || num < 0n) {
       throw new Error(`Num ${num} not in field range 0 ${prime - 1n}`);

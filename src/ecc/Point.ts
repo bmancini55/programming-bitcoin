@@ -4,28 +4,31 @@ import { IOperable } from "./Operable";
  * Defines a point on a specific curve. The curve must have the form
  * y^2 = x^3 + ax + b and has the curve defined with two number: a and b.
  */
-export class Point<T> {
+export class Point<T extends IOperable> {
   /**
    *
    * @param a
    * @param b
    */
-  public static infinity<T>(a: IOperable<T>, b: IOperable<T>) {
+  public static infinity<T extends IOperable>(a: T, b: T) {
     return new Point(undefined, undefined, a, b);
   }
 
-  constructor(
-    readonly x: IOperable<T>,
-    readonly y: IOperable<T>,
-    readonly a: IOperable<T>,
-    readonly b: IOperable<T>
-  ) {
+  constructor(readonly x: T, readonly y: T, readonly a: T, readonly b: T) {
     if (x === undefined && y === undefined) {
       return;
     }
     // y ** 2 !== x ** 3 + a * x + b
     if (y.pow(2n).neq(x.pow(3n).add(a.mul(x)).add(b))) {
       throw new Error(`(${x}, ${y}) is not on the curve`);
+    }
+  }
+
+  public toString() {
+    if (this.x === undefined) {
+      return "Point(infinity)";
+    } else {
+      return `Point(${this.x},${this.y})_${this.a}_${this.b}`;
     }
   }
 
@@ -58,7 +61,7 @@ export class Point<T> {
    * @param x
    * @param y
    */
-  public onCurve(x: IOperable<T>, y: IOperable<T>): boolean {
+  public onCurve(x: IOperable, y: IOperable): boolean {
     // y ** 2n === x ** 3n + this.a * x + this.b
     return y.pow(2n).eq(x.pow(3n).add(this.a.mul(x).add(this.b)));
   }
@@ -86,9 +89,9 @@ export class Point<T> {
     // handle when this.x !== other.x
     if (this.x.neq(other.x)) {
       const s = other.y.sub(this.y).div(other.x.sub(this.x));
-      const x = s.pow(2n).sub(this.x).sub(other.x);
-      const y = s.mul(this.x.sub(x)).sub(this.y);
-      return new Point(x, y, this.a, this.b);
+      const x = s.pow(2n).sub(this.x).sub(other.x) as T;
+      const y = s.mul(this.x.sub(x)).sub(this.y) as T;
+      return new Point<T>(x, y, this.a, this.b);
     }
 
     // handle when tangent line is vertical
@@ -99,9 +102,9 @@ export class Point<T> {
     // handle when p1 = p2
     if (this.eq(other)) {
       const s = this.x.pow(2n).smul(3n).add(this.a).div(this.y.smul(2n));
-      const x = s.pow(2n).sub(this.x.smul(2n));
-      const y = s.mul(this.x.sub(x)).sub(this.y);
-      return new Point(x, y, this.a, this.b);
+      const x = s.pow(2n).sub(this.x.smul(2n)) as T;
+      const y = s.mul(this.x.sub(x)).sub(this.y) as T;
+      return new Point<T>(x, y, this.a, this.b);
     }
   }
 
