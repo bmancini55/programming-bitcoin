@@ -1,6 +1,7 @@
 import { Point } from "./Point";
 import { S256Field } from "./S256Field";
-import { mod } from "../util/BigIntMath";
+import { mod, pow } from "../util/BigIntMath";
+import { Signature } from "./Signature";
 
 /**
  * Defines a point on the secp256k1 curve by specifying the a and b values.
@@ -53,5 +54,34 @@ export class S256Point extends Point<S256Field> {
   public smul(scalar: bigint) {
     scalar = mod(scalar, S256Point.N);
     return super.smul(scalar);
+  }
+
+  /**
+   * Verifies a signature.
+   *
+   * The verification process is as follows:
+   * We are provided (r,s) as the signature and z as the hash
+   * of the thing being signed, and P as the public key (public point) of the signer.
+   *
+   * This calculates:
+   *  `u = z/s`
+   *  `v = r/s`
+   *
+   * We then calculate `uG + vP = R`
+   * If `R's` `x` coordinate equals `r`, then signature is valid!
+   *
+   * Implementation notes:
+   *  - `s_inv` is calculated using Fermat's Little Theorem to calculate `1/s` since `n` is prime.
+   *  - `uG + vP = (r,y)` but we only care about r.
+   *
+   * @param z hash of information that was signed
+   * @param sig signature r,s
+   */
+  public verify(z: bigint, sig: Signature): boolean {
+    const sinv = pow(sig.s, S256Point.N - 2n, S256Point.N);
+    const u = mod(z * sinv, S256Point.N);
+    const v = mod(sig.r * sinv, S256Point.N);
+    const total = S256Point.G.smul(u).add(this.smul(v));
+    return sig.r === total.x.num;
   }
 }
