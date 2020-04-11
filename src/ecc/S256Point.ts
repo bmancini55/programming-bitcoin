@@ -51,9 +51,17 @@ export class S256Point extends Point<S256Field> {
     );
   }
 
+  /**
+   *
+   * @param scalar
+   */
   public smul(scalar: bigint) {
     scalar = mod(scalar, S256Point.N);
-    return super.smul(scalar);
+    const point = super.smul(scalar);
+    return new S256Point(
+      point.x ? point.x.num : undefined,
+      point.y ? point.y.num : undefined
+    );
   }
 
   /**
