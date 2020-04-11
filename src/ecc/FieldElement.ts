@@ -1,5 +1,5 @@
 import { IOperable } from "./Operable";
-import { mod } from "../util/BigIntMath";
+import { mod, pow } from "../util/BigIntMath";
 
 /**
  * Represents a finite field element which represents an elmement in the field
@@ -96,7 +96,10 @@ export class FieldElement implements IOperable {
     if (this.prime !== other.prime) {
       throw new Error(`Cannot divide two numbers in different Fields`);
     }
-    const num = mod(this.num * other.num ** (this.prime - 2n), this.prime);
+    const num = mod(
+      this.num * pow(other.num, this.prime - 2n, this.prime),
+      this.prime
+    );
     return new FieldElement(num, this.prime);
   }
 
@@ -112,8 +115,8 @@ export class FieldElement implements IOperable {
    * @param exponent
    */
   public pow(exponent: bigint): FieldElement {
-    exponent = (exponent + this.prime - 1n) % (this.prime - 1n); // fixes negative mod bug
-    const num = mod(this.num ** exponent, this.prime);
+    exponent = mod(exponent, this.prime - 1n);
+    const num = pow(this.num, exponent, this.prime);
     return new FieldElement(num, this.prime);
   }
 

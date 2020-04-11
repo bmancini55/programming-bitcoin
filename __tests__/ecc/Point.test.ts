@@ -244,4 +244,22 @@ describe("Point", () => {
       }
     });
   });
+
+  describe("256 bit size", () => {
+    const gx = BigInt("0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"); // prettier-ignore
+    const gy = BigInt("0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8"); // prettier-ignore
+    const p = 2n ** 256n - 2n ** 32n - 977n;
+    const n = BigInt("0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141"); // prettier-ignore
+    const x = new FieldElement(gx, p);
+    const y = new FieldElement(gy, p);
+    const seven = new FieldElement(7n, p);
+    const zero = new FieldElement(0n, p);
+    const G = new Point(x, y, zero, seven);
+
+    describe(".smul()", () => {
+      it("large scalar multiple", () => {
+        expect(G.smul(n)).to.deep.equal(Point.infinity(zero, seven));
+      });
+    });
+  });
 });
