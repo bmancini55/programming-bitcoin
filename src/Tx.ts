@@ -3,6 +3,9 @@ import { Readable } from "stream";
 import { StreamReader } from "./util/StreamReader";
 import { TxIn } from "./TxIn";
 import { TxOut } from "./TxOut";
+import { combine } from "./util/BufferUtil";
+import { bigToBufLE } from "./util/BigIntUtil";
+import { encodeVarint } from "./util/Varint";
 
 export class Tx {
   public version: bigint;
@@ -77,7 +80,17 @@ export class Tx {
     return hash256(this.serialize().reverse());
   }
 
+  /**
+   * Returns the byte serialization the transaction
+   */
   public serialize(): Buffer {
-    throw new Error("Not implemented");
+    return combine(
+      bigToBufLE(this.version, 4),
+      encodeVarint(BigInt(this.txIns.length)),
+      ...this.txIns.map(p => p.serialize()),
+      encodeVarint(BigInt(this.txOuts.length)),
+      ...this.txOuts.map(p => p.serialize()),
+      bigToBufLE(this.locktime, 4)
+    );
   }
 }
