@@ -1,4 +1,5 @@
 import { Readable } from "stream";
+import { decodeVarint } from "./Varint";
 
 export class StreamReader {
   constructor(readonly stream: Readable) {}
@@ -45,5 +46,19 @@ export class StreamReader {
         waitRead();
       }
     });
+  }
+
+  public async readUInt32LE(): Promise<bigint> {
+    const buf = await this.read(4);
+    return BigInt(buf.readUInt32LE());
+  }
+
+  public async readUInt64LE(): Promise<bigint> {
+    const buf = await this.read(8);
+    return buf.readBigUInt64LE();
+  }
+
+  public async readVarint(): Promise<bigint> {
+    return decodeVarint(this.stream);
   }
 }

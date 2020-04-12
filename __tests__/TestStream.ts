@@ -3,7 +3,7 @@ import { Readable } from "stream";
 export class TestStream extends Readable {
   private _data: number[];
 
-  constructor(data?: number[]) {
+  constructor(data?: number[] | Buffer) {
     super();
     this._data = [];
     if (data) {
