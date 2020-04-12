@@ -3,6 +3,9 @@ import { StreamReader } from "./util/StreamReader";
 import { combine } from "./util/BufferUtil";
 import { bigToBufLE, bigToBuf } from "./util/BigIntUtil";
 import { encodeVarint } from "./util/Varint";
+import { TxFetcher } from "./TxFetcher";
+import { Tx } from "./Tx";
+import { Script } from "./Script";
 
 export class TxIn {
   public prevTx: string;
@@ -16,7 +19,7 @@ export class TxIn {
    */
   public static async parse(stream: Readable): Promise<TxIn> {
     const sr = new StreamReader(stream);
-    const prevTx = await sr.read(32);
+    const prevTx = (await sr.read(32)).reverse(); // little-endian
     const prevIndex = await sr.readUInt32LE();
     const scriptSigLen = await sr.readVarint();
     const scriptSig = await sr.read(Number(scriptSigLen));
@@ -45,11 +48,39 @@ export class TxIn {
    */
   public serialize(): Buffer {
     return combine(
-      Buffer.from(this.prevTx, "hex"),
+      Buffer.from(this.prevTx, "hex").reverse(), // little-endian
       bigToBufLE(this.prevIndex, 4),
       encodeVarint(BigInt(this.scriptSig.length)),
       this.scriptSig,
       bigToBufLE(this.sequence, 4)
     );
+  }
+
+  /**
+   * Retrieves the previous transaction
+   * @param testnet
+   */
+  public async fetchTx(testnet: boolean = false): Promise<Tx> {
+    return TxFetcher.fetch(this.prevTx, testnet);
+  }
+
+  /**
+   * Gets the output value by looking uup the tx hash and returns
+   * the amount in satoshi
+   * @param testnet
+   */
+  public async value(testnet: boolean = false): Promise<bigint> {
+    const tx = await this.fetchTx(testnet);
+    return tx.txOuts[Number(this.prevIndex)].amount;
+  }
+
+  /**
+   * Get the ScriptPubKey by looking up the tx hash and returning the
+   * script object
+   * @param testnet
+   */
+  public async scriptPubKey(testnet: boolean = false): Promise<Script> {
+    const tx = await this.fetchTx(testnet);
+    return tx.txOuts[Number(this.prevIndex)].scriptPubKey;
   }
 }

@@ -93,4 +93,21 @@ export class Tx {
       bigToBufLE(this.locktime, 4)
     );
   }
+
+  /**
+   * Calculates the fees in satoshi
+   */
+  public async fees(testnet: boolean = false): Promise<bigint> {
+    let inAmt = 0n;
+    for (const txIn of this.txIns) {
+      inAmt += await txIn.value(testnet);
+    }
+
+    let outAmt = 0n;
+    for (const txOut of this.txOuts) {
+      outAmt += txOut.amount;
+    }
+
+    return inAmt - outAmt;
+  }
 }
