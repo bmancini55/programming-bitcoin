@@ -25,4 +25,13 @@ describe("Signature", () => {
       );
     });
   });
+
+  describe(".parse()", () => {
+    it("decodes", () => {
+      const buf = Buffer.from("3045022037206a0610995c58074999cb9767b87af4c4978db68c06e8e6e81d282047a7c60221008ca63759c1157ebeaec0d03cecca119fc9a75bf8e6d0fa65c841c8e2738cdaec", "hex"); // prettier-ignore
+      const sig = Signature.parse(buf);
+      expect(sig.r).to.equal(BigInt("0x37206a0610995c58074999cb9767b87af4c4978db68c06e8e6e81d282047a7c6")); // prettier-ignore
+      expect(sig.s).to.equal(BigInt("0x8ca63759c1157ebeaec0d03cecca119fc9a75bf8e6d0fa65c841c8e2738cdaec")); // prettier-ignore
+    });
+  });
 });
