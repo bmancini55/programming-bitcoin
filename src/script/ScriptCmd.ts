@@ -1,8 +1,8 @@
 import { ScriptOperation } from "./ScriptOperation";
-import { ScriptData } from "./ScriptData";
+import { ScriptElement } from "./ScriptElement";
 
 /**
  * Represents a value in a script. It can be either an operation
  * or data
  */
-export type ScriptPart = ScriptOperation | ScriptData;
+export type ScriptCmd = ScriptOperation | ScriptElement;

@@ -4,13 +4,14 @@ import { combine } from "../util/BufferUtil";
 import { encodeVarint } from "../util/Varint";
 import { OpCode } from "./OpCode";
 import { bigToBufLE } from "../util/BigIntUtil";
-import { ScriptPart } from "./ScriptPart";
+import { ScriptCmd } from "./ScriptCmd";
+import { OpCodeMap } from "./fns/OpCodeMap";
 
 /**
  *
  */
 export class Script {
-  public parts: ScriptPart[];
+  public cmds: ScriptCmd[];
 
   /**
    * Parses a script from a stream by reading each element from the stream values
@@ -23,7 +24,7 @@ export class Script {
     const len = await sr.readVarint();
 
     // store commands
-    const stack: ScriptPart[] = [];
+    const stack: ScriptCmd[] = [];
 
     // loop until all bytes have been read
     let pos = 0;
@@ -77,8 +78,100 @@ export class Script {
     return new Script(stack);
   }
 
-  constructor(stack?: ScriptPart[]) {
-    this.parts = stack || [];
+  constructor(stack?: ScriptCmd[]) {
+    this.cmds = stack || [];
+  }
+
+  /**
+   * Evaluates the script
+   * @param z hash of transaction information
+   */
+  public evaluate(z: Buffer) {
+    const cmds = this.cmds.slice();
+    const stack = [];
+    const altstack = [];
+
+    // process all commands in the script
+    while (cmds.length > 0) {
+      const cmd = cmds.shift(); // first element
+
+      // operations pop one or more items from the stack
+      // and push zero or more items onto the stack
+      if (typeof cmd === "number") {
+        // obtain the evaluation function
+        const operation = OpCodeMap[cmd];
+
+        // requires manipulation of the cmds stack
+        if (cmd === OpCode.OP_IF || cmd === OpCode.OP_NOTIF) {
+          if (!operation(stack, cmds)) {
+            // LOG FAILURE
+            return false;
+          }
+        }
+
+        // requires manipulation of the alt stack
+        else if (
+          cmd === OpCode.OP_TOALTSTACK ||
+          cmd === OpCode.OP_FROMALTSTACK
+        ) {
+          if (!operation(stack, altstack)) {
+            // LOG FAILURE
+            return false;
+          }
+        }
+
+        // performs signatures checks and passes in z
+        else if (
+          cmd === OpCode.OP_CHECKSIG ||
+          cmd === OpCode.OP_CHECKSIGVERIFY ||
+          cmd === OpCode.OP_CHECKMULTISIG ||
+          cmd === OpCode.OP_CHECKMULTISIGVERIFY
+        ) {
+          if (!operation(stack, z)) {
+            // LOG FAILURE
+            return false;
+          }
+        }
+
+        // otherwise it's a normal op and we can do its thing
+        else {
+          if (!operation(stack)) {
+            // LOG FAILURE
+            return false;
+          }
+        }
+      }
+
+      // elements get pushed onto the stack
+      else {
+        stack.push(cmd);
+      }
+    }
+
+    // fails if there is nothing left on the stack
+    if (stack.length === 0) {
+      return false;
+    }
+
+    // the stack will store a false value as an empty byte array
+    if (Buffer.alloc(0).equals(stack.pop())) {
+      return false;
+    }
+
+    // any other result indicates a success!
+    return true;
+  }
+
+  /**
+   * Combines two script bodies together. This is a hacky replacement for
+   * how script operations are usually executed.
+   * @param script
+   */
+  public add(script: Script): Script {
+    const cmds = [];
+    cmds.push(...this.cmds);
+    cmds.push(...script.cmds);
+    return new Script(cmds);
   }
 
   /**
@@ -95,7 +188,7 @@ export class Script {
    */
   private rawSerialize(): Buffer {
     const results: Buffer[] = [];
-    for (const op of this.parts) {
+    for (const op of this.cmds) {
       // operations are just an integer
       // operations can just be pushed directly onto the byte array
       // after being converted into a single byte byffer
