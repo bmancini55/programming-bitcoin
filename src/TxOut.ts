@@ -2,7 +2,7 @@ import { Readable } from "stream";
 import { StreamReader } from "./util/StreamReader";
 import { combine } from "./util/BufferUtil";
 import { bigToBufLE } from "./util/BigIntUtil";
-import { Script } from "./Script";
+import { Script } from "./script/Script";
 
 export class TxOut {
   public amount: bigint;

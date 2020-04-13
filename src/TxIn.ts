@@ -5,12 +5,12 @@ import { bigToBufLE, bigToBuf } from "./util/BigIntUtil";
 import { encodeVarint } from "./util/Varint";
 import { TxFetcher } from "./TxFetcher";
 import { Tx } from "./Tx";
-import { Script } from "./Script";
+import { Script } from "./script/Script";
 
 export class TxIn {
   public prevTx: string;
   public prevIndex: bigint;
-  public scriptSig: Buffer;
+  public scriptSig: Script;
   public sequence: bigint;
 
   /**
@@ -21,8 +21,7 @@ export class TxIn {
     const sr = new StreamReader(stream);
     const prevTx = (await sr.read(32)).reverse(); // little-endian
     const prevIndex = await sr.readUInt32LE();
-    const scriptSigLen = await sr.readVarint();
-    const scriptSig = await sr.read(Number(scriptSigLen));
+    const scriptSig = await Script.parse(stream);
     const sequence = await sr.readUInt32LE();
     return new TxIn(prevTx.toString("hex"), prevIndex, scriptSig, sequence);
   }
@@ -30,7 +29,7 @@ export class TxIn {
   constructor(
     prevTx: string,
     prevIndex: bigint,
-    scriptSig: Buffer,
+    scriptSig: Script,
     sequence: bigint
   ) {
     this.prevTx = prevTx;
@@ -50,8 +49,7 @@ export class TxIn {
     return combine(
       Buffer.from(this.prevTx, "hex").reverse(), // little-endian
       bigToBufLE(this.prevIndex, 4),
-      encodeVarint(BigInt(this.scriptSig.length)),
-      this.scriptSig,
+      this.scriptSig.serialize(),
       bigToBufLE(this.sequence, 4)
     );
   }
