@@ -31,6 +31,8 @@ export enum OpCode {
   OP_FROMALTSTACK = 108,
 
   OP_DUP = 118,
+  OP_SWAP = 124,
+
   OP_HASH160 = 169,
   OP_HASH256 = 170,
 

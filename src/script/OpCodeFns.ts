@@ -21,6 +21,7 @@ import { op13 } from "./fns/OpNumber";
 import { op14 } from "./fns/OpNumber";
 import { op15 } from "./fns/OpNumber";
 import { op16 } from "./fns/OpNumber";
+import { opSwap } from "./fns/OpSwap";
 
 export const OpCodeFns = {
   [OpCode.OP_0]: op0,
@@ -41,6 +42,7 @@ export const OpCodeFns = {
   [OpCode.OP_15]: op15,
   [OpCode.OP_16]: op16,
   [OpCode.OP_DUP]: opDup,
+  [OpCode.OP_SWAP]: opSwap,
   [OpCode.OP_HASH160]: opHash160,
   [OpCode.OP_HASH256]: opHash256,
   [OpCode.OP_CHECKSIG]: opCheckSig,
