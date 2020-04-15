@@ -5,7 +5,7 @@ import { encodeVarint } from "../util/Varint";
 import { OpCode } from "./OpCode";
 import { bigToBufLE } from "../util/BigIntUtil";
 import { ScriptCmd } from "./ScriptCmd";
-import { OpCodeMap } from "./fns/OpCodeMap";
+import { OpCodeFns } from "./OpCodeFns";
 
 /**
  *
@@ -99,7 +99,7 @@ export class Script {
       // and push zero or more items onto the stack
       if (typeof cmd === "number") {
         // obtain the evaluation function
-        const operation = OpCodeMap[cmd];
+        const operation = OpCodeFns[cmd];
 
         // requires manipulation of the cmds stack
         if (cmd === OpCode.OP_IF || cmd === OpCode.OP_NOTIF) {

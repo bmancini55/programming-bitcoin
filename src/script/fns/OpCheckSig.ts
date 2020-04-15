@@ -1,25 +1,23 @@
 import { S256Point } from "../../ecc/S256Point";
 import { bigFromBuf } from "../../util/BigIntUtil";
 import { Signature } from "../../ecc/Signature";
-import { ScriptCmd } from "../ScriptCmd";
-import { encodeNum } from "../NumCodec";
-import { op1 } from "./Op1";
-import { op0 } from "./Op0";
+import { op0 } from "./OpNumber";
+import { op1 } from "./OpNumber";
 
-export function opCheckSig(stack: ScriptCmd[], z: Buffer): boolean {
+export function opCheckSig(stack: Buffer[], z: Buffer): boolean {
   // return false when stack is empty
   if (!stack.length) {
     return false;
   }
 
   // pop the pubkey bytes off the stack
-  const pkBuf: Buffer = stack.pop() as Buffer;
+  const pkBuf: Buffer = stack.pop();
   if (!Buffer.isBuffer(pkBuf)) {
     return false;
   }
 
   // pop the signature and pubkey off the stack
-  const sigBuf: Buffer = stack.pop() as Buffer;
+  const sigBuf: Buffer = stack.pop();
   if (!Buffer.isBuffer(sigBuf)) {
     return false;
   }

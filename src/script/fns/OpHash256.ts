@@ -1,7 +1,6 @@
 import { hash256 } from "../../util/Hash256";
-import { ScriptCmd } from "../ScriptCmd";
 
-export function opHash256(stack: ScriptCmd[]): boolean {
+export function opHash256(stack: Buffer[]): boolean {
   // return false when stack is empty
   if (!stack.length) {
     return false;

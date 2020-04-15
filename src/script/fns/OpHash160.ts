@@ -1,12 +1,10 @@
 import { hash160 } from "../../util/Hash160";
-import { ScriptCmd } from "../ScriptCmd";
-import { ScriptElement } from "../ScriptElement";
 
 /**
  * Performs a hash160 on the
  * @param stack
  */
-export function opHash160(stack: ScriptCmd[]): boolean {
+export function opHash160(stack: Buffer[]): boolean {
   // return false when stack is empty
   if (!stack.length) {
     return false;
