@@ -2,42 +2,48 @@ import { hash256 } from "../util/Hash256";
 import { hash160 } from "../util/Hash160";
 
 export enum OpCode {
-  OP_0 = 0,
+  // Constants
+  OP_0 = 0, // 0x00
+  OP_FALSE = 0, // 0x00
+  OP_PUSHDATA1 = 76, // 0x4c
+  OP_PUSHDATA2 = 77, // 0x4d
+  OP_1 = 81, // 0x51
+  OP_TRUE = 81, // 0x51
+  OP_2 = 82, // 0x52
+  OP_3 = 83, // 0x53
+  OP_4 = 84, // 0x54
+  OP_5 = 85, // 0x55
+  OP_6 = 86, // 0x56
+  OP_7 = 87, // 0x57
+  OP_8 = 88, // 0x58
+  OP_9 = 89, // 0x50
+  OP_10 = 90, // 0x5a
+  OP_11 = 91, // 0x5b
+  OP_12 = 92, // 0x5c
+  OP_13 = 93, // 0x5d
+  OP_14 = 94, // 0x5e
+  OP_15 = 95, // 0x5f
+  OP_16 = 96, // 0x60
 
-  OP_PUSHDATA1 = 76,
-  OP_PUSHDATA2 = 77,
+  // Flow Control
+  OP_IF = 99, // 0x63
+  OP_NOTIF = 100, // 0x64
 
-  OP_1 = 81,
-  OP_2 = 82,
-  OP_3 = 83,
-  OP_4 = 84,
-  OP_5 = 85,
-  OP_6 = 86,
-  OP_7 = 87,
-  OP_8 = 88,
-  OP_9 = 89,
-  OP_10 = 90,
-  OP_11 = 91,
-  OP_12 = 92,
-  OP_13 = 93,
-  OP_14 = 94,
-  OP_15 = 95,
-  OP_16 = 96,
+  // Stack
+  OP_TOALTSTACK = 107, // 0x6b
+  OP_FROMALTSTACK = 108, // 0x6c
+  OP_DUP = 118, // 0x76
+  OP_SWAP = 124, // 0x7c
 
-  OP_IF = 99,
-  OP_NOTIF = 100,
+  // Bitwise
+  OP_EQUAL = 135, // 0x87
+  OP_EQUALVERIFY = 136, // 0x88
 
-  OP_TOALTSTACK = 107,
-  OP_FROMALTSTACK = 108,
-
-  OP_DUP = 118,
-  OP_SWAP = 124,
-
-  OP_HASH160 = 169,
-  OP_HASH256 = 170,
-
-  OP_CHECKSIG = 172,
-  OP_CHECKSIGVERIFY = 173,
-  OP_CHECKMULTISIG = 174,
-  OP_CHECKMULTISIGVERIFY = 175,
+  // Crypto
+  OP_HASH160 = 169, // 0xa9
+  OP_HASH256 = 170, // 0xaa
+  OP_CHECKSIG = 172, // 0xac
+  OP_CHECKSIGVERIFY = 173, // 0xad
+  OP_CHECKMULTISIG = 174, // 0xae
+  OP_CHECKMULTISIGVERIFY = 175, // 0xaf
 }

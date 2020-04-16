@@ -3,7 +3,6 @@ import { OpCode } from "./OpCode";
 import { opDup } from "./fns/OpDup";
 import { opHash160 } from "./fns/OpHash160";
 import { opHash256 } from "./fns/OpHash256";
-import { opCheckSig } from "./fns/OpCheckSig";
 import { op0 } from "./fns/OpNumber";
 import { op1 } from "./fns/OpNumber";
 import { op2 } from "./fns/OpNumber";
@@ -22,8 +21,15 @@ import { op14 } from "./fns/OpNumber";
 import { op15 } from "./fns/OpNumber";
 import { op16 } from "./fns/OpNumber";
 import { opSwap } from "./fns/OpSwap";
+import { opCheckSig } from "./fns/OpCheckSig";
+import { opCheckSigVerify } from "./fns/OpCheckSigVerify";
+import { opEqual } from "./fns/OpEqual";
+import { opEqualVerify } from "./fns/OpEqualVerify";
 
 export const OpCodeFns = {
+  [OpCode.OP_FALSE]: op0,
+  [OpCode.OP_TRUE]: op1,
+
   [OpCode.OP_0]: op0,
   [OpCode.OP_1]: op1,
   [OpCode.OP_2]: op2,
@@ -41,9 +47,16 @@ export const OpCodeFns = {
   [OpCode.OP_14]: op14,
   [OpCode.OP_15]: op15,
   [OpCode.OP_16]: op16,
+
   [OpCode.OP_DUP]: opDup,
   [OpCode.OP_SWAP]: opSwap,
+
+  [OpCode.OP_EQUAL]: opEqual,
+  [OpCode.OP_EQUALVERIFY]: opEqualVerify,
+
   [OpCode.OP_HASH160]: opHash160,
   [OpCode.OP_HASH256]: opHash256,
+
   [OpCode.OP_CHECKSIG]: opCheckSig,
+  [OpCode.OP_CHECKSIGVERIFY]: opCheckSigVerify,
 };
