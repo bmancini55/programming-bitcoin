@@ -101,6 +101,12 @@ export class Script {
         // obtain the evaluation function
         const operation = OpCodeFns[cmd];
 
+        // add check on the operation since not everything is supported
+        if (!operation) {
+          // LOG FAILURE
+          return false;
+        }
+
         // requires manipulation of the cmds stack
         if (cmd === OpCode.OP_IF || cmd === OpCode.OP_NOTIF) {
           if (!operation(stack, cmds)) {
