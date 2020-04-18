@@ -1,4 +1,4 @@
-import { opVerify } from "../OpVerify";
+import { opVerify } from "../flowcontrol/OpVerify";
 import { opCheckSig } from "./OpCheckSig";
 
 /**

@@ -1,6 +1,6 @@
 import { decodeNum, encodeNum } from "../../NumCodec";
 import { opNumEqual } from "./OpNumEqual";
-import { opVerify } from "../OpVerify";
+import { opVerify } from "../flowcontrol/OpVerify";
 
 /**
  * Pops two elements off the stack and pushes nothing or fails.
