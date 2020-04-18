@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { opNegate } from "../../../../src/script/fns/arithmetic/OpNegate";
+import { opNegate } from "../../../../src/script/operations/arithmetic/OpNegate";
 import { encodeNum, decodeNum } from "../../../../src/script/NumCodec";
 import { testStackLen } from "../_OperationUtils";
 

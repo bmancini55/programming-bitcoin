@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { opNumEqualVerify } from "../../../../src/script/fns/arithmetic/OpNumEqualVerify";
+import { opNumEqualVerify } from "../../../../src/script/operations/arithmetic/OpNumEqualVerify";
 import { encodeNum, decodeNum } from "../../../../src/script/NumCodec";
 import { testStackLen } from "../_OperationUtils";
 

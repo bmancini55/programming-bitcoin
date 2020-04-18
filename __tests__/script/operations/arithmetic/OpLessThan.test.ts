@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { opLessThan } from "../../../../src/script/fns/arithmetic/OpLessThan";
+import { opLessThan } from "../../../../src/script/operations/arithmetic/OpLessThan";
 import { encodeNum, decodeNum } from "../../../../src/script/NumCodec";
 import { testStackLen } from "../_OperationUtils";
 

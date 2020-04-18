@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { opMax } from "../../../../src/script/fns/arithmetic/OpMax";
+import { opMax } from "../../../../src/script/operations/arithmetic/OpMax";
 import { encodeNum, decodeNum } from "../../../../src/script/NumCodec";
 import { testStackLen } from "../_OperationUtils";
 
