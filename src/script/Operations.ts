@@ -1,8 +1,8 @@
 // tslint:disable: variable-name
 import { OpCode } from "./OpCode";
 import { opDup } from "./operations/OpDup";
-import { opHash160 } from "./operations/OpHash160";
-import { opHash256 } from "./operations/OpHash256";
+import { opHash160 } from "./operations/crypto/OpHash160";
+import { opHash256 } from "./operations/crypto/OpHash256";
 import { op0 } from "./operations/OpNumber";
 import { op1 } from "./operations/OpNumber";
 import { op2 } from "./operations/OpNumber";
@@ -21,8 +21,8 @@ import { op14 } from "./operations/OpNumber";
 import { op15 } from "./operations/OpNumber";
 import { op16 } from "./operations/OpNumber";
 import { opSwap } from "./operations/OpSwap";
-import { opCheckSig } from "./operations/OpCheckSig";
-import { opCheckSigVerify } from "./operations/OpCheckSigVerify";
+import { opCheckSig } from "./operations/crypto/OpCheckSig";
+import { opCheckSigVerify } from "./operations/crypto/OpCheckSigVerify";
 import { opEqual } from "./operations/bitwise/OpEqual";
 import { opEqualVerify } from "./operations/bitwise/OpEqualVerify";
 import { op1Add } from "./operations/arithmetic/Op1Add";

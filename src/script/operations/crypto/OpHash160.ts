@@ -1,4 +1,4 @@
-import { hash160 } from "../../util/Hash160";
+import { hash160 } from "../../../util/Hash160";
 
 /**
  * Performs a hash160 on the

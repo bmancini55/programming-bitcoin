@@ -1,4 +1,4 @@
-import { opVerify } from "./OpVerify";
+import { opVerify } from "../OpVerify";
 import { opCheckSig } from "./OpCheckSig";
 
 /**
@@ -6,13 +6,5 @@ import { opCheckSig } from "./OpCheckSig";
  * @param stack
  */
 export function opCheckSigVerify(stack: Buffer[], z: Buffer): boolean {
-  if (!opCheckSig(stack, z)) {
-    return false;
-  }
-
-  if (!opVerify(stack)) {
-    return false;
-  }
-
-  return true;
+  return opCheckSig(stack, z) && opVerify(stack);
 }

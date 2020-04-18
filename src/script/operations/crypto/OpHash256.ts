@@ -1,4 +1,4 @@
-import { hash256 } from "../../util/Hash256";
+import { hash256 } from "../../../util/Hash256";
 
 export function opHash256(stack: Buffer[]): boolean {
   // return false when stack is empty

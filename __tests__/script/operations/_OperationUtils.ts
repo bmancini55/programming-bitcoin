@@ -8,10 +8,14 @@ export function createStack(len: number) {
   return stack;
 }
 
-export function testStackLen(op: (stack: Buffer[]) => void, len: number) {
+export function testStackLen(
+  op: (stack: Buffer[], ...other: any) => void,
+  len: number,
+  ...data: any
+) {
   for (let i = 0; i < len; i++) {
     it("fails with stack length " + i, () => {
-      expect(op(createStack(i))).to.equal(false);
+      expect(op(createStack(i), ...data)).to.equal(false);
     });
   }
 }
