@@ -1,5 +1,5 @@
 import { opEqual } from "./OpEqual";
-import { opVerify } from "./OpVerify";
+import { opVerify } from "../OpVerify";
 
 /**
  * Reads two values from the stack and checks it they are bitwise equal.

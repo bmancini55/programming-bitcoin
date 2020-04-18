@@ -1,5 +1,5 @@
-import { op0 } from "./OpNumber";
-import { op1 } from "./OpNumber";
+import { op0 } from "../OpNumber";
+import { op1 } from "../OpNumber";
 
 /**
  * Reads two values from the stack and checks it they are bitwise equal.
