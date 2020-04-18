@@ -46,7 +46,7 @@ import { opMin } from "./operations/arithmetic/opMin";
 import { opMax } from "./operations/arithmetic/OpMax";
 import { opWithin } from "./operations/arithmetic/OpWithin";
 
-export const OpCodeFns = {
+export const Operations = {
   [OpCode.OP_FALSE]: op0,
   [OpCode.OP_TRUE]: op1,
 
