@@ -42,7 +42,7 @@ export function encodeNum(num: bigint): Buffer {
 /**
  * Decodes a number from Script
  */
-export function decodeNum(buf: Buffer): BigInt {
+export function decodeNum(buf: Buffer): bigint {
   if (buf.length === 0) {
     return 0n;
   }
