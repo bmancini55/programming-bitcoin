@@ -167,4 +167,46 @@ export class Tx {
       )
     );
   }
+
+  /**
+   * Verifies a single input by checking that the script correctly evaluates.
+   * This method creates a sig_hash for the input, combines the scriptSig +
+   * scriptPubKey for the input and evaluates the combined script.
+   * @param i
+   * @param testnet
+   */
+  public async verifyInput(
+    i: number,
+    testnet: boolean = false
+  ): Promise<boolean> {
+    const txin = this.txIns[i];
+    const z = await this.sigHash(i, testnet);
+    const pubKey = await txin.scriptPubKey(testnet);
+    const combined = txin.scriptSig.add(pubKey);
+    return combined.evaluate(z);
+  }
+
+  /**
+   * Verifies the complete transaction by performing steps:
+   * 1. Verifies that new bitcoins are not created
+   * 2. Verifies each input evaluates
+   *
+   * Because this is a light node, we cannot verify that it
+   * is a UTXO
+   */
+  public async verify(testnet: boolean = false): Promise<boolean> {
+    // vefify no new bitcoins are created
+    if ((await this.fees()) < 0) {
+      return false;
+    }
+
+    // verify each input evaluates
+    for (let i = 0; i < this.txIns.length; i++) {
+      if (!(await this.verifyInput(i, testnet))) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 }
