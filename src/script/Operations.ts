@@ -49,6 +49,7 @@ import { opRipemd160 } from "./operations/crypto/OpRipemd160";
 import { opSha1 } from "./operations/crypto/OpSha1";
 import { opSha256 } from "./operations/crypto/OpSha256";
 import { opCheckMultiSig } from "./operations/crypto/OpCheckMultiSig";
+import { opCheckMultiSigVerify } from "./operations/crypto/OpCheckMultiSigVerify";
 
 export const Operations = {
   [OpCode.OP_FALSE]: op0,
@@ -106,8 +107,8 @@ export const Operations = {
   [OpCode.OP_SHA256]: opSha256,
   [OpCode.OP_HASH160]: opHash160,
   [OpCode.OP_HASH256]: opHash256,
-
   [OpCode.OP_CHECKSIG]: opCheckSig,
   [OpCode.OP_CHECKSIGVERIFY]: opCheckSigVerify,
   [OpCode.OP_CHECKMULTISIG]: opCheckMultiSig,
+  [OpCode.OP_CHECKMULTISIGVERIFY]: opCheckMultiSigVerify,
 };
