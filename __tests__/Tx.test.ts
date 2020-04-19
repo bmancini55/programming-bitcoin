@@ -1,6 +1,11 @@
 import { expect } from "chai";
 import { TestStream } from "./TestStream";
 import { Tx } from "../src/Tx";
+import { TxIn } from "../src/TxIn";
+import { TxOut } from "../src/TxOut";
+import { p2pkhScript } from "../src/script/ScriptFactories";
+import { decodeBase58Check, decodeAddress } from "../src/util/Base58";
+import { PrivateKey } from "../src/ecc/PrivateKey";
 
 describe("Tx", () => {
   describe(".parse()", () => {
@@ -63,6 +68,34 @@ describe("Tx", () => {
       const tx = await Tx.parse(stream);
       const result = await tx.verify(false);
       expect(result).to.equal(true);
+    });
+  });
+
+  describe(".signInput", () => {
+    it("should sign the input", async () => {
+      const in1 = new TxIn(
+        "cf8597868cec794f9995fad1fb1066f06433332bc56c399c189460e74b7c9dfe",
+        1n
+      );
+
+      const add1 = "mrz1DDxeqypyabBs8N9y3Hybe2LEz2cYBu";
+      const out1 = new TxOut(900n, p2pkhScript(decodeAddress(add1).hash));
+
+      const add2 = "myKLpz45CSfJzWbcXtammgHmNRZsnk2ocv";
+      const out2 = new TxOut(11010000n, p2pkhScript(decodeAddress(add2).hash));
+
+      const tx = new Tx(2n);
+      tx.txIns.push(in1);
+      tx.txOuts.push(out1);
+      tx.txOuts.push(out2);
+
+      const pk = new PrivateKey(BigInt("0x60226ca8fb12f6c8096011f36c5028f8b7850b63d495bc45ec3ca478a29b473d")); // prettier-ignore
+      await tx.signInput(0, pk, true);
+
+      const buf = tx.serialize();
+      expect(buf.toString("hex")).to.equal(
+        "0200000001fe9d7c4be76094189c396cc52b333364f06610fbd1fa95994f79ec8c869785cf010000006a473044022034903565f0c10373ad8884251c1af2b7f5ce029213f052ce10411c6ba090fac1022071f17d776536f800e5e24688ee2a341bbd05a776298287659005257e9948cf6f012102e577d441d501cace792c02bfe2cc15e59672199e2195770a61fd3288fc9f934fffffffff0284030000000000001976a9147dc70ca254627bebcb54c839984d32dad9092edf88acd0ffa700000000001976a914c34015187941b20ecda9378bb3cade86e80d2bfe88ac00000000"
+      );
     });
   });
 });

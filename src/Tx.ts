@@ -4,9 +4,10 @@ import { StreamReader } from "./util/StreamReader";
 import { TxIn } from "./TxIn";
 import { TxOut } from "./TxOut";
 import { combine, bufToStream } from "./util/BufferUtil";
-import { bigToBufLE, bigFromBufLE } from "./util/BigIntUtil";
+import { bigToBufLE, bigFromBuf, bigToBuf } from "./util/BigIntUtil";
 import { encodeVarint } from "./util/Varint";
 import { Script } from "./script/Script";
+import { PrivateKey } from "./ecc/PrivateKey";
 
 export class Tx {
   public version: bigint;
@@ -42,15 +43,15 @@ export class Tx {
   }
 
   constructor(
-    version: bigint,
-    txIns: any[],
-    txOuts: any[],
-    locktime: bigint,
-    testnet: boolean
+    version: bigint = 1n,
+    txIns: TxIn[] = [],
+    txOuts: TxOut[] = [],
+    locktime: bigint = 0n,
+    testnet: boolean = false
   ) {
     this.version = version;
-    this.txIns = txIns || [];
-    this.txOuts = txOuts || [];
+    this.txIns = txIns;
+    this.txOuts = txOuts;
     this.locktime = locktime;
     this.testnet = testnet;
   }
@@ -208,5 +209,25 @@ export class Tx {
     }
 
     return true;
+  }
+
+  /**
+   * Signs the input and assigns the signature to the script sig
+   * @param i
+   * @param pk
+   * @param testnet
+   */
+  public async signInput(
+    i: number,
+    pk: PrivateKey,
+    testnet: boolean = false
+  ): Promise<boolean> {
+    const txin = this.txIns[i];
+    const z = await this.sigHash(i, testnet);
+    const sig = pk.sign(bigFromBuf(z));
+    const der = combine(sig.der(), bigToBuf(1n));
+    const sec = pk.point.sec(true);
+    txin.scriptSig = new Script([der, sec]);
+    return this.verifyInput(i, testnet);
   }
 }

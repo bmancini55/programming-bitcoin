@@ -29,8 +29,8 @@ export class TxIn {
   constructor(
     prevTx: string,
     prevIndex: bigint,
-    scriptSig: Script,
-    sequence: bigint
+    scriptSig: Script = new Script(),
+    sequence: bigint = BigInt(0xffffffff)
   ) {
     this.prevTx = prevTx;
     this.prevIndex = prevIndex;
