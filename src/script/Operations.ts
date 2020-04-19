@@ -45,6 +45,9 @@ import { opGreaterThanOrEqual } from "./operations/arithmetic/OpGreaterThanOrEqu
 import { opMin } from "./operations/arithmetic/opMin";
 import { opMax } from "./operations/arithmetic/OpMax";
 import { opWithin } from "./operations/arithmetic/OpWithin";
+import { opRipemd160 } from "./operations/crypto/OpRipemd160";
+import { opSha1 } from "./operations/crypto/OpSha1";
+import { opSha256 } from "./operations/crypto/OpSha256";
 
 export const Operations = {
   [OpCode.OP_FALSE]: op0,
@@ -97,6 +100,9 @@ export const Operations = {
   [OpCode.OP_WITHIN]: opWithin,
 
   // Crypto
+  [OpCode.OP_RIPEMD160]: opRipemd160,
+  [OpCode.OP_SHA1]: opSha1,
+  [OpCode.OP_SHA256]: opSha256,
   [OpCode.OP_HASH160]: opHash160,
   [OpCode.OP_HASH256]: opHash256,
 
