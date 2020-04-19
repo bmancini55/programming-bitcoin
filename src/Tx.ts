@@ -3,9 +3,10 @@ import { Readable } from "stream";
 import { StreamReader } from "./util/StreamReader";
 import { TxIn } from "./TxIn";
 import { TxOut } from "./TxOut";
-import { combine } from "./util/BufferUtil";
-import { bigToBufLE } from "./util/BigIntUtil";
+import { combine, bufToStream } from "./util/BufferUtil";
+import { bigToBufLE, bigFromBufLE } from "./util/BigIntUtil";
 import { encodeVarint } from "./util/Varint";
+import { Script } from "./script/Script";
 
 export class Tx {
   public version: bigint;
@@ -109,5 +110,61 @@ export class Tx {
     }
 
     return inAmt - outAmt;
+  }
+
+  /**
+   * Performs a deep-copy clone of the current transaction
+   */
+  public async clone(): Promise<Tx> {
+    return await Tx.parse(bufToStream(this.serialize()));
+  }
+
+  /**
+   * Generates the signing hash for a specific input by doing the following:
+   * 1. removing all scriptSig information and replacing it with a blank script object
+   * 2. for the target input, replace scriptSig with the scriptPubKey obtained f
+   *    from the original transaction
+   * 3. serialize the transaction and append the 0x01000000 for the SIGHASH_ALL
+   * 4. return hash256
+   * @param input
+   */
+  public async sigHash(
+    input: number,
+    testnet: boolean = false
+  ): Promise<Buffer> {
+    // serialize version
+    const version = bigToBufLE(this.version, 4);
+
+    // serialize inputs and blank out scriptSig or
+    // replace scriptSig for target input with scriptPubKey
+    const txInLen = encodeVarint(BigInt(this.txIns.length));
+    const txIns = [];
+    for (let i = 0; i < this.txIns.length; i++) {
+      const txIn = this.txIns[i];
+      const newTxIn = new TxIn(
+        txIn.prevTx,
+        txIn.prevIndex,
+        i === input ? await txIn.scriptPubKey(testnet) : new Script(),
+        txIn.sequence
+      );
+      txIns.push(newTxIn.serialize());
+    }
+
+    const txOutLen = encodeVarint(BigInt(this.txOuts.length));
+    const txOuts = this.txOuts.map(txOut => txOut.serialize());
+    const locktime = bigToBufLE(this.locktime, 4);
+    const sigHashType = bigToBufLE(1n, 4);
+
+    return hash256(
+      combine(
+        version,
+        txInLen,
+        ...txIns,
+        txOutLen,
+        ...txOuts,
+        locktime,
+        sigHashType
+      )
+    );
   }
 }
