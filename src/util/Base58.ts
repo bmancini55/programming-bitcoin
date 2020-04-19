@@ -65,7 +65,7 @@ export function decodeBase58(input: string): Buffer {
  * Decodes a base58 check value value
  * @param buf
  */
-export function decodeBase58Check(input: string) {
+export function decodeBase58Check(input: string): Buffer {
   const total = decodeBase58(input);
   const data = total.slice(0, total.length - 4);
   const checksum = total.slice(total.length - 4);
@@ -74,4 +74,16 @@ export function decodeBase58Check(input: string) {
     throw new Error("invalid checksum");
   }
   return data;
+}
+
+/**
+ * Decodes an address, where the first byte is the prefix.
+ * @param input base58check address
+ */
+export function decodeAddress(input: string): { prefix: bigint; hash: Buffer } {
+  const all = decodeBase58Check(input);
+  return {
+    prefix: BigInt(all[0]),
+    hash: all.slice(1),
+  };
 }
