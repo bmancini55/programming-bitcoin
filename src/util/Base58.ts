@@ -1,4 +1,4 @@
-import { bigFromBuf } from "./BigIntUtil";
+import { bigFromBuf, bigToBuf } from "./BigIntUtil";
 import { divmod } from "./BigIntMath";
 import { hash256 } from "./Hash256";
 import { combine } from "./BufferUtil";
@@ -45,4 +45,33 @@ export function encodeBase58(buf: Buffer) {
  */
 export function encodeBase58Check(buf: Buffer) {
   return encodeBase58(combine(buf, hash256(buf).slice(0, 4)));
+}
+
+/**
+ * Decodes a base58 string into its original buffer by constructing
+ * a number represented in base58 and converting that number into bytes
+ * @param input
+ */
+export function decodeBase58(input: string): Buffer {
+  let num = 0n;
+  for (const char of input) {
+    num *= 58n;
+    num += BigInt(base58Alphabet.indexOf(char));
+  }
+  return bigToBuf(num);
+}
+
+/**
+ * Decodes a base58 check value value
+ * @param buf
+ */
+export function decodeBase58Check(input: string) {
+  const total = decodeBase58(input);
+  const data = total.slice(0, total.length - 4);
+  const checksum = total.slice(total.length - 4);
+  const hash = hash256(data);
+  if (!hash.slice(0, 4).equals(checksum)) {
+    throw new Error("invalid checksum");
+  }
+  return data;
 }
