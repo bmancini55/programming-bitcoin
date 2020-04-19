@@ -10,3 +10,12 @@ export function p2pkhScript(h160: Buffer): Script {
     OpCode.OP_CHECKSIG,
   ]);
 }
+
+export function p2msScript(m: bigint, n: bigint, ...pubkeys: Buffer[]): Script {
+  return new Script([
+    0x50 + Number(m),
+    ...pubkeys,
+    0x50 + Number(n),
+    OpCode.OP_CHECKMULTISIG,
+  ]); // prettier-ignore
+}
