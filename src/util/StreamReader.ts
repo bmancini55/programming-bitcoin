@@ -4,6 +4,24 @@ import { decodeVarint } from "./Varint";
 export class StreamReader {
   constructor(readonly stream: Readable) {}
 
+  /**
+   * Performs a blocked async read operation. This method will either immedidately resolve the
+   * requested data or will wait for the `readable` event to be emitted and will attempt to
+   * read the requestted length of data again.
+   *
+   * This is necessary because `read(len)` on streams will emit null when the data is not
+   * yet available on the Buffer.
+   *
+   * @example
+   * ```typescript
+   * const sr = new StreamReader(stream);
+   * const val1 = await sr.read(4);
+   * const val2 = await sr.read(2);
+   * const val3 = await sr.read(32);
+   * ```
+   *
+   * @param len
+   */
   public async read(len?: number): Promise<Buffer> {
     const stream = this.stream;
 
