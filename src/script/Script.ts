@@ -1,11 +1,14 @@
 import { Readable } from "stream";
 import { StreamReader } from "../util/StreamReader";
-import { combine } from "../util/BufferUtil";
+import { combine, combineLE, bufToStream } from "../util/BufferUtil";
 import { encodeVarint } from "../util/Varint";
 import { OpCode } from "./OpCode";
 import { bigToBufLE } from "../util/BigIntUtil";
 import { ScriptCmd } from "./ScriptCmd";
 import { Operations } from "./Operations";
+import { opHash160 } from "./operations/crypto/OpHash160";
+import { opEqual } from "./operations/bitwise/OpEqual";
+import { opVerify } from "./operations/flowcontrol/OpVerify";
 
 /**
  *
@@ -86,7 +89,7 @@ export class Script {
    * Evaluates the script
    * @param z hash of transaction information
    */
-  public evaluate(z: Buffer) {
+  public async evaluate(z: Buffer): Promise<boolean> {
     const cmds = this.cmds.slice();
     const stack = [];
     const altstack = [];
@@ -151,6 +154,47 @@ export class Script {
       // elements get pushed onto the stack
       else {
         stack.push(cmd);
+
+        // Check for p2sh pattern by looking at the reamining commands.
+        // The pattern should be: OP_HASH160, 20-bytes of data, OP_EQUAL
+        // When p2sh, execute the p2sh script and if successful pushes the
+        // dedeem script onto the cmds.
+        if (
+          cmds.length === 3 &&
+          cmds[0] === OpCode.OP_HASH160 &&
+          (cmds[1] as Buffer).length === 20 &&
+          cmds[2] === OpCode.OP_EQUAL
+        ) {
+          // execute OP_HASH160
+          cmds.unshift();
+          if (!opHash160(stack)) {
+            return false;
+          }
+
+          // execute pushdata
+          stack.push(cmds.unshift());
+
+          // execute OP_EQUAL
+          cmds.unshift();
+          if (!opEqual(stack)) {
+            return false;
+          }
+
+          // execute OP_VERIFY to remove remaining value
+          if (!opVerify(stack)) {
+            // LOG failures
+            return false;
+          }
+
+          // the next section converts the redeemScript into commands by:
+          // 1. prepending the varint script length
+          // 2. parseing the buffer information
+          // 3. pushing the commands onto the stack
+          const redeemScriptBuf = combine(encodeVarint(BigInt(cmd.length)), cmd); // prettier-ignore
+          const redeemScriptStream = bufToStream(redeemScriptBuf);
+          const redeemScript = await Script.parse(redeemScriptStream);
+          cmds.push(...redeemScript.cmds);
+        }
       }
     }
 

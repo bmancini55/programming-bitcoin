@@ -42,29 +42,6 @@ describe("ScriptFactories", () => {
         "4752210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f817982102c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee552ae"
       );
     });
-
-    it("evaluates", () => {
-      const p1 = new PrivateKey(1n);
-      const p2 = new PrivateKey(2n);
-      const m = 2n;
-      const n = 2n;
-      const scriptPubKey = p2msScript(
-        m,
-        n,
-        p1.point.sec(true),
-        p2.point.sec(true)
-      );
-
-      const z = Buffer.alloc(32);
-      const scriptSig = new Script([
-        OpCode.OP_0,
-        combine(p1.sign(bigFromBuf(z)).der(), Buffer.from([0x1])),
-        combine(p2.sign(bigFromBuf(z)).der(), Buffer.from([0x1])),
-      ]);
-
-      const script = scriptSig.add(scriptPubKey);
-      expect(script.evaluate(z)).to.equal(true);
-    });
   });
 
   describe(".p2shScript()", () => {

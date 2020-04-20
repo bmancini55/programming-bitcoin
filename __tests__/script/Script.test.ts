@@ -2,6 +2,14 @@ import { expect } from "chai";
 import { Script } from "../../src/script/Script";
 import { TestStream } from "../TestStream";
 import { OpCode } from "../../src/script/OpCode";
+import { PrivateKey } from "../../src/ecc/PrivateKey";
+import {
+  p2msScript,
+  p2pkhScript,
+  p2shScript,
+} from "../../src/script/ScriptFactories";
+import { combine, combineLE } from "../../src/util/BufferUtil";
+import { bigFromBuf } from "../../src/util/BigIntUtil";
 
 describe("Script", () => {
   describe(".parse()", () => {
@@ -40,7 +48,7 @@ describe("Script", () => {
   });
 
   describe(".evaluate()", () => {
-    it("evaluates", () => {
+    it("evaluates p2pk", async () => {
       const z = Buffer.from("7c076ff316692a3d7eb3c3bb0f8b1488cf72e1afcd929e29307032997a838a3d", "hex"); // prettier-ignore
 
       const scriptPubKey = new Script([
@@ -53,7 +61,54 @@ describe("Script", () => {
       ]); // prettier-ignore
 
       const combined = scriptSig.add(scriptPubKey);
-      expect(combined.evaluate(z)).to.equal(true);
+      const result = await combined.evaluate(z);
+      expect(result).to.equal(true);
+    });
+
+    it("evaluates p2pk", async () => {});
+
+    it("evaluates p2pkh", async () => {
+      const z = Buffer.alloc(32);
+      const p1 = new PrivateKey(1n);
+      const scriptPubKey = p2pkhScript(p1.point.hash160(true));
+      const scriptSig = new Script([
+        combineLE(p1.sign(bigFromBuf(z)).der(), 0x01),
+        p1.point.sec(true),
+      ]);
+      const script = scriptSig.add(scriptPubKey);
+      const result = await script.evaluate(z);
+      expect(result).to.equal(true);
+    });
+
+    it("evaluates p2ms", async () => {
+      const p1 = new PrivateKey(1n);
+      const p2 = new PrivateKey(2n);
+      const m = 2n;
+      const n = 2n;
+      const scriptPubKey = p2msScript(
+        m,
+        n,
+        p1.point.sec(true),
+        p2.point.sec(true)
+      );
+
+      const z = Buffer.alloc(32);
+      const scriptSig = new Script([
+        OpCode.OP_0,
+        combine(p1.sign(bigFromBuf(z)).der(), Buffer.from([0x1])),
+        combine(p2.sign(bigFromBuf(z)).der(), Buffer.from([0x1])),
+      ]);
+
+      const script = scriptSig.add(scriptPubKey);
+      const result = await script.evaluate(z);
+      expect(result).to.equal(true);
+    });
+
+    it("evaluates p2sh", async () => {
+      // TODO
+      // const p1 = new PrivateKey(1n);
+      // const redeemScript = p2pkhScript(p1.point.hash160(true));
+      // const scriptPubkey = p2shScript(redeemScript.)
     });
   });
 });
