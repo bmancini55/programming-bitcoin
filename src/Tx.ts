@@ -186,13 +186,26 @@ export class Tx {
    * Verifies a single input by checking that the script correctly evaluates.
    * This method creates a sig_hash for the input, combines the scriptSig +
    * scriptPubKey for the input and evaluates the combined script.
+   *
+   * For P2SH inputs, it will check if the scriptPubKey is P2SH and will pluck
+   * the redeemScript from the end of the scriptSig commands, parse the redeemScript
+   * and provide it to the hash function.
    * @param i
    * @param testnet
    */
   public async verifyInput(i: number): Promise<boolean> {
     const txin = this.txIns[i];
-    const z = await this.sigHash(i);
     const pubKey = await txin.scriptPubKey(this.testnet);
+    let redeemScript: Script;
+
+    if (pubKey.isP2shScriptPubKey()) {
+      const bytes = txin.scriptSig.cmds.slice(-1)[0] as Buffer;
+      const buffer = combine(encodeVarint(BigInt(bytes.length)), bytes);
+      const stream = bufToStream(buffer);
+      redeemScript = await Script.parse(stream);
+    }
+
+    const z = await this.sigHash(i, redeemScript);
     const combined = txin.scriptSig.add(pubKey);
     return combined.evaluate(z);
   }
@@ -207,7 +220,7 @@ export class Tx {
    */
   public async verify(): Promise<boolean> {
     // vefify no new bitcoins are created
-    if ((await this.fees()) < 0) {
+    if ((await this.fees(this.testnet)) < 0) {
       return false;
     }
 
