@@ -42,7 +42,7 @@ async function httpGet(requrl: string): Promise<Buffer> {
       const bufs = [];
       res.on("data", buf => bufs.push(buf.toString()));
       res.on("end", () => {
-        const body = bufs.join();
+        const body = bufs.join("");
         if (res.statusCode === 200) resolve(Buffer.from(body, "hex"));
         else {
           reject(
