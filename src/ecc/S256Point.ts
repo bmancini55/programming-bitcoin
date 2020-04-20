@@ -4,8 +4,7 @@ import { mod, pow } from "../util/BigIntMath";
 import { Signature } from "./Signature";
 import { bigToBuf, bigFromBuf } from "../util/BigIntUtil";
 import { hash160 } from "../util/Hash160";
-import { encodeBase58Check } from "../util/Base58";
-import { combine } from "../util/BufferUtil";
+import { p2pkhAddress } from "../util/Address";
 
 /**
  * Defines a point on the secp256k1 curve by specifying the a and b values.
@@ -181,18 +180,16 @@ export class S256Point extends Point<S256Field> {
   }
 
   /**
-   * Generates the base58 hash160 bitcoin address. The address can be
-   * either compressed or uncompressed and can be for testnet or mainnet.
+   * Generates the base58check encoded address for a P2PKH address.
+   * It accepts the hash of an SEC encoded point. The hash can either
+   * be from the compressed or uncompressed value.
    *
    * Testnet uses a prefix of 0x6f
    * Mainnet uses a prefix of 0x00
    *
-   * @param compressed default is true
    * @param testnet default is false
    */
-  public address(compressed: boolean = true, testnet: boolean = false) {
-    const prefix = Buffer.from([testnet ? 0x6f : 0x00]);
-    const h160 = this.hash160(compressed);
-    return encodeBase58Check(combine(prefix, h160));
+  public address(compressed: boolean = true, testnet: boolean = false): string {
+    return p2pkhAddress(this.hash160(compressed), testnet);
   }
 }

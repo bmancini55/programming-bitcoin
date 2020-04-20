@@ -4,8 +4,8 @@ import { Tx } from "../src/Tx";
 import { TxIn } from "../src/TxIn";
 import { TxOut } from "../src/TxOut";
 import { p2pkhScript } from "../src/script/ScriptFactories";
-import { decodeBase58Check, decodeAddress } from "../src/util/Base58";
 import { PrivateKey } from "../src/ecc/PrivateKey";
+import { decodeAddress } from "../src/util/Address";
 
 describe("Tx", () => {
   describe(".parse()", () => {

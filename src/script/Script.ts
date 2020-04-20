@@ -10,7 +10,7 @@ import { opHash160 } from "./operations/crypto/OpHash160";
 import { opEqual } from "./operations/bitwise/OpEqual";
 import { opVerify } from "./operations/flowcontrol/OpVerify";
 import { hash160 } from "../util/Hash160";
-import { isNumber } from "util";
+import { p2shAddress } from "../util/Address";
 
 /**
  *
@@ -300,5 +300,16 @@ export class Script {
    */
   public hash160(): Buffer {
     return hash160(this.serialize());
+  }
+
+  /**
+   * Creates a base58check encoded address using the hash160 value of the
+   * script. It uses the prefix 0x05 for mainnet which results in addresses
+   * that start with 3 in Base58. Testnet uses a prefix of 0xc4 and starts with
+   * and address of 2.
+   * @param testnet
+   */
+  public address(testnet: boolean = false): string {
+    return p2shAddress(this.hash160(), testnet);
   }
 }
