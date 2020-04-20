@@ -7,6 +7,8 @@ import {
   p2msScript,
   p2pkhScript,
   p2shScript,
+  p2pkhSig,
+  p2msSig,
 } from "../../src/script/ScriptFactories";
 import { combine, combineLE } from "../../src/util/BufferUtil";
 import { bigFromBuf } from "../../src/util/BigIntUtil";
@@ -70,11 +72,9 @@ describe("Script", () => {
     it("evaluates p2pkh", async () => {
       const z = Buffer.alloc(32);
       const p1 = new PrivateKey(1n);
+      const sig = p1.sign(bigFromBuf(z));
       const scriptPubKey = p2pkhScript(p1.point.hash160(true));
-      const scriptSig = new Script([
-        combineLE(p1.sign(bigFromBuf(z)).der(), 0x01),
-        p1.point.sec(true),
-      ]);
+      const scriptSig = p2pkhSig(sig.der(), p1.point.sec(true));
       const script = scriptSig.add(scriptPubKey);
       const result = await script.evaluate(z);
       expect(result).to.equal(true);
@@ -93,11 +93,9 @@ describe("Script", () => {
       );
 
       const z = Buffer.alloc(32);
-      const scriptSig = new Script([
-        OpCode.OP_0,
-        combine(p1.sign(bigFromBuf(z)).der(), Buffer.from([0x1])),
-        combine(p2.sign(bigFromBuf(z)).der(), Buffer.from([0x1])),
-      ]);
+      const sig1 = p1.sign(bigFromBuf(z));
+      const sig2 = p2.sign(bigFromBuf(z));
+      const scriptSig = p2msSig(sig1.der(), sig2.der());
 
       const script = scriptSig.add(scriptPubKey);
       const result = await script.evaluate(z);
@@ -105,10 +103,9 @@ describe("Script", () => {
     });
 
     it("evaluates p2sh", async () => {
-      // TODO
-      // const p1 = new PrivateKey(1n);
-      // const redeemScript = p2pkhScript(p1.point.hash160(true));
-      // const scriptPubkey = p2shScript(redeemScript.)
+      const p1 = new PrivateKey(1n);
+      const redeemScript = p2pkhScript(p1.point.hash160(true));
+      const scriptPubkey = p2shScript(redeemScript.hash160());
     });
   });
 });
