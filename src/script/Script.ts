@@ -10,6 +10,7 @@ import { opHash160 } from "./operations/crypto/OpHash160";
 import { opEqual } from "./operations/bitwise/OpEqual";
 import { opVerify } from "./operations/flowcontrol/OpVerify";
 import { hash160 } from "../util/Hash160";
+import { isNumber } from "util";
 
 /**
  *
@@ -167,16 +168,17 @@ export class Script {
           cmds[2] === OpCode.OP_EQUAL
         ) {
           // execute OP_HASH160
-          cmds.unshift();
+          cmds.shift();
           if (!opHash160(stack)) {
             return false;
           }
 
           // execute pushdata
-          stack.push(cmds.unshift());
+          const h160 = cmds.shift();
+          stack.push(h160);
 
           // execute OP_EQUAL
-          cmds.unshift();
+          cmds.shift();
           if (!opEqual(stack)) {
             return false;
           }

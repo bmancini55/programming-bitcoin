@@ -1,6 +1,8 @@
 import { Script } from "./Script";
 import { OpCode } from "./OpCode";
 import { combineLE } from "../util/BufferUtil";
+import { ScriptCmd } from "./ScriptCmd";
+import { encodeVarint } from "../util/Varint";
 
 /**
  * Creates the p2pkh scriptPubKey from a Hash160 of a public key point
@@ -138,5 +140,33 @@ export function p2shScript(h160: Buffer): Script {
     OpCode.OP_HASH160,
     h160,
     OpCode.OP_EQUAL,
+  ]); // prettier-ignore
+}
+
+/**
+ * Creates a p2sh scriptSig for the redeem script and scriptSig data.
+ *
+ * @remarks
+ *  <redeem script>
+ *  <other commands>
+ *
+ * @example
+ * ```typescript
+ * const redeemScript = new Script([
+ *    OpCode.OP_DUP,
+ *    OpCode.OP_ADD,
+ *    OpCode.OP_4,
+ *    OpCode.OP_EQUAL
+ * ]);
+ * const scriptSig = p2shSig(redeemScript, OpCode.OP_2);
+ * ```
+ *
+ * @param redeemScript redeems script that has the hash160 matching the scriptPubKey
+ * @param cmds zero or more commands needed to unlock the redeemScript
+ */
+export function p2shSig(redeemScript: Script, ...cmds: ScriptCmd[]): Script {
+  return new Script([
+    ...cmds,
+    redeemScript.serialize(),
   ]); // prettier-ignore
 }
