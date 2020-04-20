@@ -93,16 +93,4 @@ describe("Base58", () => {
       });
     }
   });
-
-  describe(".decodeAddress", () => {
-    it("should decode an address", () => {
-      const address = "mrz1DDxeqypyabBs8N9y3Hybe2LEz2cYBu";
-
-      const actual = base58.decodeAddress(address);
-      expect(actual.hash.toString("hex")).to.equal(
-        "7dc70ca254627bebcb54c839984d32dad9092edf"
-      );
-      expect(actual.prefix).to.equal(111n);
-    });
-  });
 });

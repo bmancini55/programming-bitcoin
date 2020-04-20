@@ -53,12 +53,21 @@ export function encodeBase58Check(buf: Buffer) {
  * @param input
  */
 export function decodeBase58(input: string): Buffer {
+  // determine leading zero bytes which will be prepended
+  let prefix = 0;
+  for (let i = 0; i < input.length; i++) {
+    if (input[i] === "1") prefix += 1;
+    else break;
+  }
+
+  // process remaining bytes
   let num = 0n;
   for (const char of input) {
     num *= 58n;
     num += BigInt(base58Alphabet.indexOf(char));
   }
-  return bigToBuf(num);
+
+  return combine(Buffer.alloc(prefix), bigToBuf(num));
 }
 
 /**
@@ -74,16 +83,4 @@ export function decodeBase58Check(input: string): Buffer {
     throw new Error("invalid checksum");
   }
   return data;
-}
-
-/**
- * Decodes an address, where the first byte is the prefix.
- * @param input base58check address
- */
-export function decodeAddress(input: string): { prefix: bigint; hash: Buffer } {
-  const all = decodeBase58Check(input);
-  return {
-    prefix: BigInt(all[0]),
-    hash: all.slice(1),
-  };
 }
