@@ -1,4 +1,5 @@
 import { Readable } from "stream";
+import { bigToBufLE } from "./BigIntUtil";
 
 /**
  * Strips the left bytes if they match the provided value
@@ -17,6 +18,23 @@ export function lstrip(buf: Buffer, match: number) {
  */
 export function combine(...buf: Buffer[]): Buffer {
   return Buffer.concat(buf);
+}
+
+/**
+ * Combines numbers, bigints, and Buffers into a single byte stream
+ * where numbers are in little-endian format
+ * @param vals
+ */
+export function combineLE(...vals: (number | bigint | Buffer)[]): Buffer {
+  const bufs: Buffer[] = [];
+  for (const val of vals) {
+    if (val instanceof Buffer) {
+      bufs.push(val);
+    } else {
+      bufs.push(bigToBufLE(BigInt(val)));
+    }
+  }
+  return Buffer.concat(bufs);
 }
 
 /**

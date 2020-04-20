@@ -1,10 +1,15 @@
 import { expect } from "chai";
 import { PrivateKey } from "../../src/ecc/PrivateKey";
-import { p2pkhScript, p2msScript } from "../../src/script/ScriptFactories";
+import {
+  p2pkhScript,
+  p2msScript,
+  p2shScript,
+} from "../../src/script/ScriptFactories";
 import { bigFromBuf } from "../../src/util/BigIntUtil";
 import { Script } from "../../src/script/Script";
 import { combine } from "../../src/util/BufferUtil";
 import { OpCode } from "../../src/script/OpCode";
+import { hash160 } from "../../src/util/Hash160";
 
 describe("ScriptFactories", () => {
   describe("p2pkhScript", () => {
@@ -59,6 +64,16 @@ describe("ScriptFactories", () => {
 
       const script = scriptSig.add(scriptPubKey);
       expect(script.evaluate(z)).to.equal(true);
+    });
+  });
+
+  describe(".p2shScript()", () => {
+    it("serializes", () => {
+      const h160 = hash160(Buffer.from("test"));
+      const script = p2shScript(h160);
+      expect(script.serialize().toString("hex")).to.equal(
+        "17a914cebaa98c19807134434d107b0d3e5692a516ea6687"
+      );
     });
   });
 });
