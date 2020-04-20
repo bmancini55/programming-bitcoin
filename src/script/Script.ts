@@ -312,4 +312,21 @@ export class Script {
   public address(testnet: boolean = false): string {
     return p2shAddress(this.hash160(), testnet);
   }
+
+  /**
+   * Returns true if the script matches the pattern for a P2SH script pubkey
+   * which is three elements:
+   *
+   *  OP_HASH160
+   *  <hash 20-bytes>
+   *  OP_EQUAL
+   */
+  public isP2shScriptPubKey(): boolean {
+    return (
+      this.cmds.length === 3 &&
+      this.cmds[0] === OpCode.OP_HASH160 &&
+      (this.cmds[1] as Buffer).length === 20 &&
+      this.cmds[2] === OpCode.OP_EQUAL
+    );
+  }
 }
