@@ -16,7 +16,10 @@ export class Tx {
   public locktime: bigint;
   public testnet: boolean;
 
-  public static async parse(stream: Readable): Promise<Tx> {
+  public static async parse(
+    stream: Readable,
+    testnet: boolean = false
+  ): Promise<Tx> {
     const sr = new StreamReader(stream);
 
     // get the version
@@ -39,7 +42,7 @@ export class Tx {
     // locktime
     const locktime = await sr.readUInt32LE();
 
-    return new Tx(version, ins, outs, locktime, true);
+    return new Tx(version, ins, outs, locktime, testnet);
   }
 
   constructor(
@@ -123,16 +126,13 @@ export class Tx {
   /**
    * Generates the signing hash for a specific input by doing the following:
    * 1. removing all scriptSig information and replacing it with a blank script object
-   * 2. for the target input, replace scriptSig with the scriptPubKey obtained f
-   *    from the original transaction
+   * 2. for the target input, replace scriptSig with the scriptPubKey obtained
+   *    from the original transaction or the redeemScript if it is provided
    * 3. serialize the transaction and append the 0x01000000 for the SIGHASH_ALL
    * 4. return hash256
    * @param input
    */
-  public async sigHash(
-    input: number,
-    testnet: boolean = false
-  ): Promise<Buffer> {
+  public async sigHash(input: number, redeemScript?: Script): Promise<Buffer> {
     // serialize version
     const version = bigToBufLE(this.version, 4);
 
@@ -142,10 +142,23 @@ export class Tx {
     const txIns = [];
     for (let i = 0; i < this.txIns.length; i++) {
       const txIn = this.txIns[i];
+
+      // determine which script to use
+      let script: Script;
+      if (i !== input) {
+        script = new Script(); // blank when not the input
+      } else {
+        if (redeemScript) {
+          script = redeemScript; // redeem script when provided
+        } else {
+          script = await txIn.scriptPubKey(this.testnet); // previous script_pub_key otherwise
+        }
+      }
+
       const newTxIn = new TxIn(
         txIn.prevTx,
         txIn.prevIndex,
-        i === input ? await txIn.scriptPubKey(testnet) : new Script(),
+        script,
         txIn.sequence
       );
       txIns.push(newTxIn.serialize());
@@ -176,13 +189,10 @@ export class Tx {
    * @param i
    * @param testnet
    */
-  public async verifyInput(
-    i: number,
-    testnet: boolean = false
-  ): Promise<boolean> {
+  public async verifyInput(i: number): Promise<boolean> {
     const txin = this.txIns[i];
-    const z = await this.sigHash(i, testnet);
-    const pubKey = await txin.scriptPubKey(testnet);
+    const z = await this.sigHash(i);
+    const pubKey = await txin.scriptPubKey(this.testnet);
     const combined = txin.scriptSig.add(pubKey);
     return combined.evaluate(z);
   }
@@ -195,7 +205,7 @@ export class Tx {
    * Because this is a light node, we cannot verify that it
    * is a UTXO
    */
-  public async verify(testnet: boolean = false): Promise<boolean> {
+  public async verify(): Promise<boolean> {
     // vefify no new bitcoins are created
     if ((await this.fees()) < 0) {
       return false;
@@ -203,7 +213,7 @@ export class Tx {
 
     // verify each input evaluates
     for (let i = 0; i < this.txIns.length; i++) {
-      if (!(await this.verifyInput(i, testnet))) {
+      if (!(await this.verifyInput(i))) {
         return false;
       }
     }
@@ -215,19 +225,14 @@ export class Tx {
    * Signs the input and assigns the signature to the script sig
    * @param i
    * @param pk
-   * @param testnet
    */
-  public async signInput(
-    i: number,
-    pk: PrivateKey,
-    testnet: boolean = false
-  ): Promise<boolean> {
+  public async signInput(i: number, pk: PrivateKey): Promise<boolean> {
     const txin = this.txIns[i];
-    const z = await this.sigHash(i, testnet);
+    const z = await this.sigHash(i);
     const sig = pk.sign(bigFromBuf(z));
     const der = combine(sig.der(), bigToBuf(1n));
     const sec = pk.point.sec(true);
     txin.scriptSig = new Script([der, sec]);
-    return this.verifyInput(i, testnet);
+    return this.verifyInput(i);
   }
 }
