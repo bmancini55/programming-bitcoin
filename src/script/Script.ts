@@ -9,6 +9,7 @@ import { Operations } from "./Operations";
 import { opHash160 } from "./operations/crypto/OpHash160";
 import { opEqual } from "./operations/bitwise/OpEqual";
 import { opVerify } from "./operations/flowcontrol/OpVerify";
+import { hash160 } from "../util/Hash160";
 
 /**
  *
@@ -290,5 +291,12 @@ export class Script {
 
     // combine all parts of data
     return Buffer.concat(results);
+  }
+
+  /**
+   * Returns the hash160 for the script. This is useful for the p2sh methods
+   */
+  public hash160(): Buffer {
+    return hash160(this.serialize());
   }
 }
