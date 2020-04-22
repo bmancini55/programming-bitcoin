@@ -7,6 +7,7 @@ import { p2pkhScript } from "../src/script/ScriptFactories";
 import { PrivateKey } from "../src/ecc/PrivateKey";
 import { decodeAddress } from "../src/util/Address";
 import { Script } from "../src/script/Script";
+import { bufToStream } from "../src/util/BufferUtil";
 
 describe("Tx", () => {
   describe(".parse()", () => {
@@ -181,6 +182,42 @@ a914ba35042cfe9fc66fd35ac2224eebdafd1028ad2788acdc4ace020000000017a91474d691da\
         new TxIn(Buffer.alloc(32).toString("hex"), BigInt(0xffffffff))
       );
       expect(tx.isCoinbase()).to.equal(true);
+    });
+  });
+
+  describe(".coinbaseHeight()", () => {
+    let tx: Tx;
+
+    beforeEach(() => {
+      tx = new Tx();
+      tx.txIns.push(new TxIn("0".repeat(64), BigInt(0xffffffff)));
+    });
+
+    it("undefined when not coinbase", () => {
+      tx.txIns.push(new TxIn("1".repeat(64), 0n));
+      expect(tx.coinbaseHeight()).to.equal(undefined);
+    });
+
+    it("when not BIP0034 compatible", async () => {
+      const buf = Buffer.from(
+        "4d04ffff001d0104455468652054696d6573203033\
+2f4a616e2f32303039204368616e63656c6c6f72206f6e206272696e6b206f66207365636f6e64\
+206261696c6f757420666f722062616e6b73",
+        "hex"
+      );
+      tx.txIns[0].scriptSig = await Script.parse(bufToStream(buf));
+      expect(Number(tx.coinbaseHeight())).to.equal(486604799);
+    });
+
+    it("height when BIP0034 compatible", async () => {
+      const buf = Buffer.from(
+        "5e03d71b07254d696e656420627920416e74506f6f\
+6c20626a31312f4542312f4144362f43205914293101fabe6d6d678e2c8c34afc36896e7d94028\
+24ed38e856676ee94bfdb0c6c4bcd8b2e5666a0400000000000000c7270000a5e00e00",
+        "hex"
+      );
+      tx.txIns[0].scriptSig = await Script.parse(bufToStream(buf));
+      expect(Number(tx.coinbaseHeight())).to.equal(465879);
     });
   });
 });

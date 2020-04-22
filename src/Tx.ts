@@ -4,10 +4,16 @@ import { StreamReader } from "./util/StreamReader";
 import { TxIn } from "./TxIn";
 import { TxOut } from "./TxOut";
 import { combine, bufToStream } from "./util/BufferUtil";
-import { bigToBufLE, bigFromBuf, bigToBuf } from "./util/BigIntUtil";
+import {
+  bigToBufLE,
+  bigFromBuf,
+  bigToBuf,
+  bigFromBufLE,
+} from "./util/BigIntUtil";
 import { encodeVarint } from "./util/Varint";
 import { Script } from "./script/Script";
 import { PrivateKey } from "./ecc/PrivateKey";
+import { runInThisContext } from "vm";
 
 export class Tx {
   public version: bigint;
@@ -262,5 +268,15 @@ export class Tx {
         "0000000000000000000000000000000000000000000000000000000000000000" &&
       this.txIns[0].prevIndex === BigInt(0xffffffff)
     );
+  }
+
+  /**
+   * Coinbase transactions are required to put the block height in the first
+   * command of the scriptSig for the coinbase input. This was implemented in
+   * BIP0034 to ensure that coinbase transactions do not have the same hash
+   */
+  public coinbaseHeight(): bigint {
+    if (!this.isCoinbase()) return;
+    return bigFromBufLE(this.txIns[0].scriptSig.cmds[0] as Buffer);
   }
 }
