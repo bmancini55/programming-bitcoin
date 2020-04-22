@@ -167,4 +167,20 @@ a914ba35042cfe9fc66fd35ac2224eebdafd1028ad2788acdc4ace020000000017a91474d691da\
       );
     });
   });
+
+  describe("isCoinbase()", () => {
+    it("false when not coinbase", () => {
+      const tx = new Tx();
+      tx.txIns.push(new TxIn(Buffer.alloc(32, 1).toString("hex"), 0n));
+      expect(tx.isCoinbase()).to.equal(false);
+    });
+
+    it("true when coinbase", () => {
+      const tx = new Tx();
+      tx.txIns.push(
+        new TxIn(Buffer.alloc(32).toString("hex"), BigInt(0xffffffff))
+      );
+      expect(tx.isCoinbase()).to.equal(true);
+    });
+  });
 });

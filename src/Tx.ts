@@ -248,4 +248,19 @@ export class Tx {
     txin.scriptSig = new Script([der, sec]);
     return this.verifyInput(i);
   }
+
+  /**
+   * Returns true when the transaction follows these three rules:
+   * 1. Only a single input
+   * 2. PrevTxId = 32-bytes of 00
+   * 3. PrevIdx = 0xffffffff
+   */
+  public isCoinbase(): boolean {
+    return (
+      this.txIns.length === 1 &&
+      this.txIns[0].prevTx ===
+        "0000000000000000000000000000000000000000000000000000000000000000" &&
+      this.txIns[0].prevIndex === BigInt(0xffffffff)
+    );
+  }
 }
