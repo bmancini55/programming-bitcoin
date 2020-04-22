@@ -19,7 +19,7 @@ export class TxIn {
    */
   public static async parse(stream: Readable): Promise<TxIn> {
     const sr = new StreamReader(stream);
-    const prevTx = (await sr.read(32)).reverse(); // little-endian
+    const prevTx = (await sr.read(32)).reverse(); // convert to little-endian
     const prevIndex = await sr.readUInt32LE();
     const scriptSig = await Script.parse(stream);
     const sequence = await sr.readUInt32LE();
@@ -47,7 +47,7 @@ export class TxIn {
    */
   public serialize(): Buffer {
     return combine(
-      Buffer.from(this.prevTx, "hex").reverse(), // little-endian
+      Buffer.from(this.prevTx, "hex").reverse(), // convert to little-endian
       bigToBufLE(this.prevIndex, 4),
       this.scriptSig.serialize(),
       bigToBufLE(this.sequence, 4)

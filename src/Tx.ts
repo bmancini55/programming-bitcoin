@@ -78,17 +78,18 @@ export class Tx {
   }
 
   /**
-   * Returns the 32-byte hash as hexidecimal
+   * Returns the 32-byte hash of the transaction serialization as little-endian
+   * as a hexidecimal string
    */
   public id(): string {
     return this.hash().toString("hex");
   }
 
   /**
-   * Returns the hash256 of the transaction serialization in little-endian.
+   * Returns the hash256 of the transaction serialziattion as little-endian.
    */
   public hash(): Buffer {
-    return hash256(this.serialize().reverse());
+    return hash256(this.serialize()).reverse();
   }
 
   /**
