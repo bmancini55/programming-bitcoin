@@ -1,6 +1,7 @@
 import { Readable } from "stream";
 import { StreamReader } from "./util/StreamReader";
 import { writeBytesReverse, writeBytes } from "./util/BufferUtil";
+import { hash256 } from "./util/Hash256";
 
 export class Block {
   /**
@@ -36,32 +37,39 @@ export class Block {
   }
 
   /**
-   * Version
+   * Version in big-endian
+   *
+   * Version is normally used for signaling which features are available. Bitcoin
+   * blocks used sequential versions up through version 4. After this, BIP0009
+   * was used to indicate that additional versioning bits could be used.
    */
   public version: bigint;
 
   /**
-   * Previous block as 32-bytes in big-endian
+   * Previous block as 32-bytes in big-endian.
    */
   public prevBlock: Buffer;
 
   /**
-   * Merkle root as 32-bytes in big-endian
+   * Merkle root as 32-bytes in big-endian. This encodes all ordered transactions in
+   * a 32-byte hash.
    */
   public merkleRoot: Buffer;
 
   /**
-   *
+   * Unix style timestamp which is the number of seconds elapsed since January 1, 1970.
+   * This value will eventually overflow in 2106.
    */
   public timestamp: bigint;
 
   /**
-   *
+   * Bits encodes the proof-of-work necessary in this block.
    */
   public bits: Buffer;
 
   /**
-   *
+   * Nonce stands for number used only once. It is the number changed by miners when
+   * looking for proof-of-work.
    */
   public nonce: Buffer;
 
@@ -129,5 +137,45 @@ export class Block {
     offset += 4;
 
     return result;
+  }
+
+  /**
+   * Returns the `hash256` of the block header and returns the hash
+   * value in little-endian
+   */
+  public hash(): Buffer {
+    return hash256(this.serialize()).reverse();
+  }
+
+  /**
+   * Returns true if the block version supports BIP0009. Prior to this BIP,
+   * an incremental approach to block version was used culminatting with vesrion 4
+   * blocks supporting BIP00065 (OP_CHECKLOCKTIMEVERIFY).
+   *
+   * BIP0009 solves the problem of allowing multiple feature to be signaled on the
+   * network at a time. There can be 29 different features signalled at the same time.
+   *
+   * The top 3-bits of the version are fixed to 001 which indicates that BIP0009 is
+   * in use. This enables the range of bits for use [0x20000000...0x3FFFFFFF].
+   *
+   * The remaining 29 can signal readiness for a soft force. Once 95% of blocks signal
+   * readiness in a given 2016 block epoch the feature is activated by the network.
+   */
+  public bip9() {
+    return this.version >> 29n === 1n;
+  }
+
+  /**
+   * Returns true if the version is signaling BIP91 which used bit 4.
+   */
+  public bip91() {
+    return this.bip9() && ((this.version >> 4n) & 1n) === 1n;
+  }
+
+  /**
+   * Returns true if the version is signaling BIP141 which used bit 1.
+   */
+  public bip141() {
+    return this.bip9() && ((this.version >> 1n) & 1n) === 1n;
   }
 }

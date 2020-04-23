@@ -45,4 +45,82 @@ c53b8c0a0a220cfd0000000000000000005b0750fce0a889502d40508d39576821155e9c9e3f5c\
       );
     });
   });
+
+  describe(".bip9()", () => {
+    it("true", () => {
+      const block = new Block(
+        536870914n,
+        Buffer.alloc(32),
+        Buffer.alloc(32),
+        0n,
+        Buffer.alloc(4),
+        Buffer.alloc(4)
+      );
+      expect(block.bip9()).to.equal(true);
+    });
+
+    it("false", () => {
+      const block = new Block(
+        1n,
+        Buffer.alloc(32),
+        Buffer.alloc(32),
+        0n,
+        Buffer.alloc(4),
+        Buffer.alloc(4)
+      );
+      expect(block.bip9()).to.equal(false);
+    });
+  });
+
+  describe(".bip91()", () => {
+    it("true", () => {
+      const block = new Block(
+        (1n << 29n) + (1n << 4n),
+        Buffer.alloc(32),
+        Buffer.alloc(32),
+        0n,
+        Buffer.alloc(4),
+        Buffer.alloc(4)
+      );
+      expect(block.bip91()).to.equal(true);
+    });
+
+    it("false", () => {
+      const block = new Block(
+        (1n << 29n) + 1n,
+        Buffer.alloc(32),
+        Buffer.alloc(32),
+        0n,
+        Buffer.alloc(4),
+        Buffer.alloc(4)
+      );
+      expect(block.bip91()).to.equal(false);
+    });
+  });
+
+  describe(".bip91()", () => {
+    it("true", () => {
+      const block = new Block(
+        (1n << 29n) + (1n << 1n),
+        Buffer.alloc(32),
+        Buffer.alloc(32),
+        0n,
+        Buffer.alloc(4),
+        Buffer.alloc(4)
+      );
+      expect(block.bip141()).to.equal(true);
+    });
+
+    it("false", () => {
+      const block = new Block(
+        (1n << 29n) + 1n,
+        Buffer.alloc(32),
+        Buffer.alloc(32),
+        0n,
+        Buffer.alloc(4),
+        Buffer.alloc(4)
+      );
+      expect(block.bip141()).to.equal(false);
+    });
+  });
 });
