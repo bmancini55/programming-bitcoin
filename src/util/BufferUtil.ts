@@ -47,3 +47,35 @@ export function bufToStream(buf: Buffer, end: boolean = true): Readable {
   stream.push(null); // end stream
   return stream;
 }
+
+/**
+ * Write the bytes in the `from` buffer to the `to` buffer startg at the offset
+ * in the `to` buffer.
+ * @param from
+ * @param to
+ * @param offset
+ */
+export function writeBytes(from: Buffer, to: Buffer, offset: number = 0) {
+  for (let i = 0; i < from.length; i++) {
+    to.writeUInt8(from[i], offset);
+    offset += 1;
+  }
+}
+
+/**
+ * Write the bytes in the `from` buffer to the `to` buffer in reverse order
+ * starting at the provided offset of the `to` buffer.
+ * @param from
+ * @param to
+ * @param offset
+ */
+export function writeBytesReverse(
+  from: Buffer,
+  to: Buffer,
+  offset: number = 0
+) {
+  for (let i = from.length - 1; i >= 0; i--) {
+    to.writeUInt8(from[i], offset);
+    offset += 1;
+  }
+}
