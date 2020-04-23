@@ -1,5 +1,6 @@
 import { Readable } from "stream";
 import { StreamReader } from "./util/StreamReader";
+import { writeBytesReverse, writeBytes } from "./util/BufferUtil";
 
 export class Block {
   /**
@@ -87,5 +88,46 @@ export class Block {
     this.timestamp = timestamp;
     this.bits = bits;
     this.nonce = nonce;
+  }
+
+  /**
+   * Serializes the block into a Buffer according to the following information
+   *
+   * version - 4 bytes LE
+   * previous block - 32 bytes LE
+   * merkle root - 32 bytes LE
+   * timestamp - 4 bytes LE
+   * bits - 4 bytes
+   * nonce - 4 bytes
+   */
+  public serialize(): Buffer {
+    const result = Buffer.alloc(4 + 32 + 32 + 4 + 4 + 4);
+    let offset = 0;
+
+    // version, 4 bytes LE
+    result.writeUInt32LE(Number(this.version), offset);
+    offset += 4;
+
+    // previous block, 32 bytes LE
+    writeBytesReverse(this.prevBlock, result, offset);
+    offset += 32;
+
+    // merkle root, 32 bytes LE
+    writeBytesReverse(this.merkleRoot, result, offset);
+    offset += 32;
+
+    // timestamp, 4 bytes LE
+    result.writeUInt32LE(Number(this.timestamp), offset);
+    offset += 4;
+
+    // bits, 4 bytes
+    writeBytes(this.bits, result, offset);
+    offset += 4;
+
+    // nonce, 4 bytes
+    writeBytes(this.nonce, result, offset);
+    offset += 4;
+
+    return result;
   }
 }
