@@ -2,6 +2,7 @@ import { Readable } from "stream";
 import { StreamReader } from "./util/StreamReader";
 import { writeBytesReverse, writeBytes } from "./util/BufferUtil";
 import { hash256 } from "./util/Hash256";
+import { bigFromBuf } from "./util/BigIntUtil";
 
 export class Block {
   /**
@@ -13,8 +14,8 @@ export class Block {
    * 8ec39428b17323fa0ddec8e887b4a7c53b8c0a0a220cfd000000000000000000 - previous block, 32-bytes LE
    * 5b0750fce0a889502d40508d39576821155e9c9e3f5c3157f961db38fd8b25be - merkle root, 32-bytes LE
    * 1e77a759 - timestamp, 4-byte LE
-   * e93c0118 - bits, 4-byte
-   * a4ffd71d - nonce, 4-byte
+   * e93c0118 - bits, 4-byte LE
+   * a4ffd71d - nonce, 4-byte LE
    * ```
    * @example
    * ```typescript
@@ -31,8 +32,8 @@ export class Block {
     const prevBlock = (await sr.read(32)).reverse(); // convert LE to BE
     const merkleRoot = (await sr.read(32)).reverse(); // convert LE to BE
     const timestamp = await sr.readUInt32LE();
-    const bits = await sr.read(4);
-    const nonce = await sr.read(4);
+    const bits = (await sr.read(4)).reverse(); // convert LE to BE
+    const nonce = (await sr.read(4)).reverse(); // convert LE to BE
     return new Block(version, prevBlock, merkleRoot, timestamp, bits, nonce);
   }
 
@@ -63,13 +64,15 @@ export class Block {
   public timestamp: bigint;
 
   /**
-   * Bits encodes the proof-of-work necessary in this block.
+   * Bits encodes the proof-of-work necessary in this block and is represented in
+   * big-endian. It contains two parts: exponent and coefficient. When in big-endian
+   * byte 0 is the exponent, bytes 1-3 are the coefficient as a big-endian number.
    */
   public bits: Buffer;
 
   /**
    * Nonce stands for number used only once. It is the number changed by miners when
-   * looking for proof-of-work.
+   * looking for proof-of-work. It is represented here in big-endian.
    */
   public nonce: Buffer;
 
@@ -105,7 +108,7 @@ export class Block {
    * previous block - 32 bytes LE
    * merkle root - 32 bytes LE
    * timestamp - 4 bytes LE
-   * bits - 4 bytes
+   * bits - 4 bytes LE
    * nonce - 4 bytes
    */
   public serialize(): Buffer {
@@ -128,19 +131,21 @@ export class Block {
     result.writeUInt32LE(Number(this.timestamp), offset);
     offset += 4;
 
-    // bits, 4 bytes
-    writeBytes(this.bits, result, offset);
+    // bits, 4 bytes LE
+    writeBytesReverse(this.bits, result, offset);
     offset += 4;
 
-    // nonce, 4 bytes
-    writeBytes(this.nonce, result, offset);
+    // nonce, 4 bytes LE
+    writeBytesReverse(this.nonce, result, offset);
     offset += 4;
 
     return result;
   }
 
   /**
-   * Returns the `hash256` of the block header in little-endian
+   * Returns the `hash256` of the block header in little-endian. This value will
+   * have leading zeros and looks like:
+   * 0000000000000000007e9e4c586439b0cdbe13b1370bdd9435d76a644d047523
    */
   public hash(): Buffer {
     return hash256(this.serialize()).reverse();
@@ -186,13 +191,42 @@ export class Block {
    * target = coefficient * 256^(exponent-3)
    * ```
    *
-   * When the bits field is little-endian:
-   *   Exponent is the top-byte
-   *   Coefficient is the lower-three bytes
+   * The target looks like:
+   * 0000000000000000013ce9000000000000000000000000000000000000000000
+   *
    */
   public bitsToTarget(): bigint {
-    const exp = BigInt(this.bits.readUInt8(3));
-    const coeff = BigInt(this.bits.readUIntLE(0, 3));
+    const exp = BigInt(this.bits.readUInt8(0));
+    const coeff = BigInt(this.bits.readUIntBE(1, 3));
     return coeff * 256n ** (exp - 3n);
+  }
+
+  /**
+   * Difficulty is a more readable version of the target and makes the targets more
+   * easy to compare and comprehend. The genesis block had a difficulty of 1.
+   *
+   * It is calculated with the formula:
+   *
+   * ```
+   * difficulty = 0xffff * 256 ^ (0x1d - 3) / target
+   * ```
+   */
+  public difficulty(): bigint {
+    const target = this.bitsToTarget();
+    return (BigInt(0xffff) * 256n ** (BigInt(0x1d) - 3n)) / target;
+  }
+
+  /**
+   * This method verifies the proof of work is valid by looking at the
+   * hash256 of the block header (in LE) and ensuring it is lower than the
+   * target.
+   *
+   * For example:
+   * T: 0000000000000000013ce9000000000000000000000000000000000000000000
+   * H: 0000000000000000007e9e4c586439b0cdbe13b1370bdd9435d76a644d047523
+   *
+   */
+  public checkProofOfWork(): boolean {
+    return bigFromBuf(this.hash()) < this.bitsToTarget();
   }
 }
