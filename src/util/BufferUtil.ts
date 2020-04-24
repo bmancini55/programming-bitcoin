@@ -13,6 +13,18 @@ export function lstrip(buf: Buffer, match: number) {
 }
 
 /**
+ * Strips the right bytes if they match the provided match value
+ * @param buf
+ * @param match
+ */
+export function rstrip(buf: Buffer, match: number) {
+  for (let i = buf.length - 1; i >= 0; i--) {
+    if (buf[i] !== match) return Buffer.from(buf.slice(0, i + 1));
+  }
+  return Buffer.alloc(0);
+}
+
+/**
  * Combines buffers together in the provided order
  * @param buf
  */
