@@ -177,4 +177,22 @@ export class Block {
   public bip141() {
     return this.bip9() && ((this.version >> 1n) & 1n) === 1n;
   }
+
+  /**
+   * Calculates the proof-of-work requirements from the bits. Target is calculated
+   * as:
+   *
+   * ```
+   * target = coefficient * 256^(exponent-3)
+   * ```
+   *
+   * When the bits field is little-endian:
+   *   Exponent is the top-byte
+   *   Coefficient is the lower-three bytes
+   */
+  public bitsToTarget(): bigint {
+    const exp = BigInt(this.bits.readUInt8(3));
+    const coeff = BigInt(this.bits.readUIntLE(0, 3));
+    return coeff * 256n ** (exp - 3n);
+  }
 }
