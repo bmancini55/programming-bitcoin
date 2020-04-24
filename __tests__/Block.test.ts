@@ -46,6 +46,24 @@ c53b8c0a0a220cfd0000000000000000005b0750fce0a889502d40508d39576821155e9c9e3f5c\
     });
   });
 
+  describe(".hash()", () => {
+    it("should return LE hash", () => {
+      const block = new Block(
+        536870914n,
+        Buffer.from("000000000000000000fd0c220a0a8c3bc5a7b487e8c8de0dfa2373b12894c38e", "hex"),
+        Buffer.from("be258bfd38db61f957315c3f9e9c5e15216857398d50402d5089a8e0fc50075b", "hex"),
+        1504147230n,
+        Buffer.from("e93c0118", "hex"),
+        Buffer.from("a4ffd71d", "hex"),
+      ); // prettier-ignore
+
+      const result = block.hash();
+      expect(result.toString("hex")).to.equal(
+        "0000000000000000007e9e4c586439b0cdbe13b1370bdd9435d76a644d047523"
+      );
+    });
+  });
+
   describe(".bip9()", () => {
     it("true", () => {
       const block = new Block(

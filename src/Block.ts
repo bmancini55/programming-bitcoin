@@ -140,8 +140,7 @@ export class Block {
   }
 
   /**
-   * Returns the `hash256` of the block header and returns the hash
-   * value in little-endian
+   * Returns the `hash256` of the block header in little-endian
    */
   public hash(): Buffer {
     return hash256(this.serialize()).reverse();
