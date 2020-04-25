@@ -142,7 +142,7 @@ c53b8c0a0a220cfd0000000000000000005b0750fce0a889502d40508d39576821155e9c9e3f5c\
     });
   });
 
-  describe(".bitsToTarget()", () => {
+  describe(".target()", () => {
     it("calculates target", () => {
       const block = new Block(
         536870914n,
@@ -159,7 +159,7 @@ c53b8c0a0a220cfd0000000000000000005b0750fce0a889502d40508d39576821155e9c9e3f5c\
         Buffer.from("1dd7ffa4", "hex")
       );
 
-      const target = block.bitsToTarget();
+      const target = block.target();
       expect(target.toString(16).padStart(64, "0")).to.equal(
         "0000000000000000013ce9000000000000000000000000000000000000000000"
       );

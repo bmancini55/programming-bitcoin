@@ -3,6 +3,7 @@ import { StreamReader } from "./util/StreamReader";
 import { writeBytesReverse, writeBytes } from "./util/BufferUtil";
 import { hash256 } from "./util/Hash256";
 import { bigFromBuf } from "./util/BigIntUtil";
+import { bitsToTarget } from "./util/BlockUtil";
 
 export class Block {
   /**
@@ -67,6 +68,8 @@ export class Block {
    * Bits encodes the proof-of-work necessary in this block and is represented in
    * big-endian. It contains two parts: exponent and coefficient. When in big-endian
    * byte 0 is the exponent, bytes 1-3 are the coefficient as a big-endian number.
+   * It is a succint way to express a really large number and can represent either
+   * a positive or negative number.
    */
   public bits: Buffer;
 
@@ -195,10 +198,8 @@ export class Block {
    * 0000000000000000013ce9000000000000000000000000000000000000000000
    *
    */
-  public bitsToTarget(): bigint {
-    const exp = BigInt(this.bits.readUInt8(0));
-    const coeff = BigInt(this.bits.readUIntBE(1, 3));
-    return coeff * 256n ** (exp - 3n);
+  public target(): bigint {
+    return bitsToTarget(this.bits);
   }
 
   /**
@@ -212,7 +213,7 @@ export class Block {
    * ```
    */
   public difficulty(): bigint {
-    const target = this.bitsToTarget();
+    const target = this.target();
     return (BigInt(0xffff) * 256n ** (BigInt(0x1d) - 3n)) / target;
   }
 
@@ -227,6 +228,6 @@ export class Block {
    *
    */
   public checkProofOfWork(): boolean {
-    return bigFromBuf(this.hash()) < this.bitsToTarget();
+    return bigFromBuf(this.hash()) < this.target();
   }
 }
