@@ -48,7 +48,13 @@ export function targetToBits(target: bigint): Buffer {
 
 /**
  * Calculates a new target from the start and end blocks. This covers a period of
- * 2016 blocks
+ * 2016 blocks. It restrricts the upper board to 8 weeks and the lower bound to
+ * 3.5 days.
+ *
+ * The new target is calculated with the formula:
+ * ```
+ * target = (old * timediff) / TWO_WEEKS
+ * ```
  * @param start
  * @param end
  */
@@ -71,4 +77,20 @@ export function calcNewTarget(start: Block, end: Block): bigint {
   const oldTarget = end.target();
   const newTarget = (oldTarget * timediff) / TWO_WEEKS;
   return newTarget;
+}
+
+/**
+ * Calculates new bits from the start and end blocks. This covers a period of
+ * 2016 blocks. It restricts the upper board to 8 weeks and the lower bound to
+ * 3.5 days.
+ *
+ * The new target is calculated with the formula:
+ * ```
+ * target = (old * timediff) / TWO_WEEKS
+ * ```
+ * The new target is then converted into bits
+ */
+export function calcNewBits(start: Block, end: Block): Buffer {
+  const target = calcNewTarget(start, end);
+  return targetToBits(target);
 }
