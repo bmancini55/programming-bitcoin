@@ -26,6 +26,12 @@ export class StreamReader {
     const stream = this.stream;
 
     return new Promise(resolve => {
+      // shortcut read if we don't want to read any bytes
+      if (len === 0) {
+        resolve(Buffer.alloc(0));
+        return;
+      }
+
       let val: Buffer = stream.read(len);
 
       // when reading all and we have a value
@@ -64,6 +70,16 @@ export class StreamReader {
         waitRead();
       }
     });
+  }
+
+  public async readUInt8(): Promise<number> {
+    const buf = await this.read(1);
+    return buf[0];
+  }
+
+  public async readUInt16LE(): Promise<bigint> {
+    const buf = await this.read(2);
+    return BigInt(buf.readUInt16LE());
   }
 
   public async readUInt32LE(): Promise<bigint> {

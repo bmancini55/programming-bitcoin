@@ -45,7 +45,7 @@ export class NetworkEnvelope {
     const payload = await sr.read(Number(payloadLen));
 
     // verify the checksum
-    const hash = hash256(payload).slice(4);
+    const hash = hash256(payload).slice(0, 4);
     if (!hash.equals(payloadChecksum)) {
       throw new Error("checksum does not match");
     }
