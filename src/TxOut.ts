@@ -1,7 +1,6 @@
 import { Readable } from "stream";
-import { StreamReader } from "./util/StreamReader";
 import { combine } from "./util/BufferUtil";
-import { bigToBufLE } from "./util/BigIntUtil";
+import { bigFromBufLE, bigToBufLE } from "./util/BigIntUtil";
 import { Script } from "./script/Script";
 
 export class TxOut {
@@ -12,10 +11,9 @@ export class TxOut {
    * Parses a TxOut from a stream
    * @param stream
    */
-  public static async parse(stream: Readable): Promise<TxOut> {
-    const sr = new StreamReader(stream);
-    const amount = await sr.readUInt64LE();
-    const scriptPubKey = await Script.parse(stream);
+  public static parse(stream: Readable): TxOut {
+    const amount = bigFromBufLE(stream.read(8));
+    const scriptPubKey = Script.parse(stream);
     return new TxOut(amount, scriptPubKey);
   }
 

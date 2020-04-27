@@ -1,8 +1,6 @@
 import { Readable } from "stream";
-import { StreamReader } from "./util/StreamReader";
 import { combine } from "./util/BufferUtil";
-import { bigToBufLE, bigToBuf } from "./util/BigIntUtil";
-import { encodeVarint } from "./util/Varint";
+import { bigToBufLE, bigFromBufLE } from "./util/BigIntUtil";
 import { TxFetcher } from "./TxFetcher";
 import { Tx } from "./Tx";
 import { Script } from "./script/Script";
@@ -17,12 +15,11 @@ export class TxIn {
    * Parses a TxIn from a stream
    * @param stream
    */
-  public static async parse(stream: Readable): Promise<TxIn> {
-    const sr = new StreamReader(stream);
-    const prevTx = (await sr.read(32)).reverse(); // convert to little-endian
-    const prevIndex = await sr.readUInt32LE();
-    const scriptSig = await Script.parse(stream);
-    const sequence = await sr.readUInt32LE();
+  public static parse(stream: Readable): TxIn {
+    const prevTx = stream.read(32).reverse(); // convert to little-endian
+    const prevIndex = bigFromBufLE(stream.read(4));
+    const scriptSig = Script.parse(stream);
+    const sequence = bigFromBufLE(stream.read(4));
     return new TxIn(prevTx.toString("hex"), prevIndex, scriptSig, sequence);
   }
 

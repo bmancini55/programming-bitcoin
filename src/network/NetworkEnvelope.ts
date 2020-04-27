@@ -1,4 +1,3 @@
-import { StreamReader } from "../util/StreamReader";
 import { Readable } from "stream";
 import { hash256 } from "../util/Hash256";
 import { rstrip, combine } from "../util/BufferUtil";
@@ -11,22 +10,32 @@ export const TestnetNetworkMagic = Buffer.from("00110907", "hex");
 
 export class NetworkEnvelope {
   /**
-   * Parses the network envelope according to the following formula:
+   * Reads the network envelope off a steam and returns either a complete
+   * network envelope with its payload or undefined when not enough information
+   * is available on the buffer.
    *
    * ```
-   * network magic - 0xf9beb4d9 for mainnet
+   * network magic - 4 bytes
    * command - 12 bytes, human-readable
-   * payload length - 4 bytes, little-endian
+   * payload length - 4 bytes LE
    * payload checksum - first 4-bytes of the hash256 of the payload
    * payload - data
    * ```
    * @param stream
+   * @param testnet
    */
-  public static async parse(stream: Readable, testnet: boolean = false) {
-    const sr = new StreamReader(stream);
-    const magic = await sr.read(4);
+  public static parse(
+    stream: Readable,
+    testnet: boolean = false
+  ): NetworkEnvelope {
+    // read the envelope bytes first
+    const chunk = stream.read(4 + 12 + 4 + 4);
+    if (!chunk) {
+      return chunk;
+    }
 
-    // validate magic
+    // parse and validate the magic bytes
+    const magic = chunk.slice(0, 4);
     const expectedMagic = testnet ? TestnetNetworkMagic : NetworkMagic;
     if (!expectedMagic.equals(magic)) {
       throw new Error(
@@ -36,13 +45,26 @@ export class NetworkEnvelope {
       );
     }
 
-    // read the stripped command
-    const command = rstrip(await sr.read(12), 0).toString();
+    // parse the stripped command
+    const command = rstrip(chunk.slice(4, 16), 0).toString();
 
-    // process the payload
-    const payloadLen = await sr.readUInt32LE();
-    const payloadChecksum = await sr.read(4);
-    const payload = await sr.read(Number(payloadLen));
+    // parse the payload len and checksum
+    const payloadLen = chunk.slice(16, 20).readUInt32LE();
+    const payloadChecksum = chunk.slice(20);
+
+    // initialize to zero length buffer incase we don't need a read anything
+    let payload = Buffer.alloc(0);
+
+    // try to read payload bytes, if the payload bytes cant be read,
+    // then we will push read bytes back into the sterams buffer and will try
+    // again when more data is available on the stream
+    if (payloadLen) {
+      payload = stream.read(Number(payloadLen));
+      if (!payload) {
+        stream.unshift(chunk);
+        return;
+      }
+    }
 
     // verify the checksum
     const hash = hash256(payload).slice(0, 4);
@@ -50,6 +72,7 @@ export class NetworkEnvelope {
       throw new Error("checksum does not match");
     }
 
+    // finally return the complete and validated network envelope
     return new NetworkEnvelope(command, payload, testnet);
   }
 

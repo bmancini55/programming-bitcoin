@@ -1,7 +1,6 @@
 import { Readable } from "stream";
-import { StreamReader } from "../util/StreamReader";
 import { combine, combineLE, bufToStream } from "../util/BufferUtil";
-import { encodeVarint } from "../util/Varint";
+import { encodeVarint, decodeVarint } from "../util/Varint";
 import { OpCode } from "./OpCode";
 import { bigToBufLE } from "../util/BigIntUtil";
 import { ScriptCmd } from "./ScriptCmd";
@@ -19,14 +18,12 @@ export class Script {
   public cmds: ScriptCmd[];
 
   /**
-   * Parses a script from a stream by reading each element from the stream values
+   * Parses a buffer by reading
    * @param stream
    */
-  public static async parse(stream: Readable): Promise<Script> {
-    const sr = new StreamReader(stream);
-
+  public static parse(stream: Readable): Script {
     // read the length
-    const len = await sr.readVarint();
+    const len = decodeVarint(stream);
 
     // store commands
     const stack: ScriptCmd[] = [];
@@ -35,14 +32,14 @@ export class Script {
     let pos = 0;
     while (pos < len) {
       // read the current operation/element
-      const op = (await sr.read(1)).readUInt8();
+      const op = stream.read(1)[0];
       pos += 1;
 
       // data range between 1-75 bytes
       // simple read op len of bytes
-      if (op >= 1 && op <= 75) {
+      if (op >= 0x01 && op <= 0x4b) {
         const n = op;
-        stack.push(await sr.read(n));
+        stack.push(stream.read(n));
         pos += n;
       }
 
@@ -50,10 +47,10 @@ export class Script {
       // the first byte is the length
       // then the read n bytes
       else if (op === OpCode.OP_PUSHDATA1) {
-        const n = (await sr.read(1)).readUInt8();
+        const n = stream.read(1)[0];
         pos += 1;
 
-        stack.push(await sr.read(n));
+        stack.push(stream.read(n));
         pos += n;
       }
 
@@ -61,10 +58,10 @@ export class Script {
       // reads two bytes little-endian to determine n
       // reads n bytes of data
       else if (op === OpCode.OP_PUSHDATA2) {
-        const n = (await sr.read(2)).readUInt16LE();
+        const n = Number(stream.read(2).readUInt16LE());
         pos += 2;
 
-        stack.push(await sr.read(n));
+        stack.push(stream.read(n));
         pos += n;
       }
 
@@ -91,7 +88,7 @@ export class Script {
    * Evaluates the script
    * @param z hash of transaction information
    */
-  public async evaluate(z: Buffer): Promise<boolean> {
+  public evaluate(z: Buffer): boolean {
     const cmds = this.cmds.slice();
     const stack = [];
     const altstack = [];
@@ -193,9 +190,8 @@ export class Script {
           // 1. prepending the varint script length
           // 2. parseing the buffer information
           // 3. pushing the commands onto the stack
-          const redeemScriptBuf = combine(encodeVarint(BigInt(cmd.length)), cmd); // prettier-ignore
-          const redeemScriptStream = bufToStream(redeemScriptBuf);
-          const redeemScript = await Script.parse(redeemScriptStream);
+          const redeemScriptBuf = combine(encodeVarint(cmd.length), cmd);
+          const redeemScript = Script.parse(bufToStream(redeemScriptBuf));
           cmds.push(...redeemScript.cmds);
         }
       }

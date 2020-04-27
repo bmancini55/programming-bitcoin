@@ -1,6 +1,5 @@
 import { hash256 } from "./util/Hash256";
 import { Readable } from "stream";
-import { StreamReader } from "./util/StreamReader";
 import { TxIn } from "./TxIn";
 import { TxOut } from "./TxOut";
 import { combine, bufToStream } from "./util/BufferUtil";
@@ -10,10 +9,9 @@ import {
   bigToBuf,
   bigFromBufLE,
 } from "./util/BigIntUtil";
-import { encodeVarint } from "./util/Varint";
+import { encodeVarint, decodeVarint } from "./util/Varint";
 import { Script } from "./script/Script";
 import { PrivateKey } from "./ecc/PrivateKey";
-import { runInThisContext } from "vm";
 
 export class Tx {
   public version: bigint;
@@ -22,31 +20,26 @@ export class Tx {
   public locktime: bigint;
   public testnet: boolean;
 
-  public static async parse(
-    stream: Readable,
-    testnet: boolean = false
-  ): Promise<Tx> {
-    const sr = new StreamReader(stream);
-
+  public static parse(stream: Readable, testnet: boolean = false): Tx {
     // get the version
-    const version = await sr.readUInt32LE();
+    const version = bigFromBufLE(stream.read(4));
 
     // obtain the inputs
-    const inLen = await sr.readVarint();
+    const inLen = decodeVarint(stream);
     const ins = [];
     for (let i = 0n; i < inLen; i++) {
-      ins.push(await TxIn.parse(stream));
+      ins.push(TxIn.parse(stream));
     }
 
     // obtain the outputs
-    const outLen = await sr.readVarint();
+    const outLen = decodeVarint(stream);
     const outs = [];
     for (let i = 0n; i < outLen; i++) {
-      outs.push(await TxOut.parse(stream));
+      outs.push(TxOut.parse(stream));
     }
 
     // locktime
-    const locktime = await sr.readUInt32LE();
+    const locktime = bigFromBufLE(stream.read(4));
 
     return new Tx(version, ins, outs, locktime, testnet);
   }
@@ -121,13 +114,6 @@ export class Tx {
     }
 
     return inAmt - outAmt;
-  }
-
-  /**
-   * Performs a deep-copy clone of the current transaction
-   */
-  public async clone(): Promise<Tx> {
-    return await Tx.parse(bufToStream(this.serialize()));
   }
 
   /**
@@ -209,7 +195,7 @@ export class Tx {
       const bytes = txin.scriptSig.cmds.slice(-1)[0] as Buffer;
       const buffer = combine(encodeVarint(BigInt(bytes.length)), bytes);
       const stream = bufToStream(buffer);
-      redeemScript = await Script.parse(stream);
+      redeemScript = Script.parse(stream);
     }
 
     const z = await this.sigHash(i, redeemScript);

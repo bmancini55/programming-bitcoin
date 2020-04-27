@@ -1,26 +1,25 @@
 import { expect } from "chai";
 import { Block } from "../src/Block";
-import { TestStream } from "./TestStream";
 import { bufToStream } from "../src/util/BufferUtil";
 
 describe("Block", () => {
   describe(".parse()", () => {
-    it("parse headers", async () => {
-      const raw =
+    it("parse headers", () => {
+      const buf = Buffer.from(
         "020000208ec39428b17323fa0ddec8e887b4a7\
 c53b8c0a0a220cfd0000000000000000005b0750fce0a889502d40508d39576821155e9c9e3f5c\
-3157f961db38fd8b25be1e77a759e93c0118a4ffd71d";
-      const buf = Buffer.from(raw, "hex");
-      const stream = bufToStream(buf);
-      const block = await Block.parse(stream);
-      expect(block.version).to.equal(536870914n);
+3157f961db38fd8b25be1e77a759e93c0118a4ffd71d",
+        "hex"
+      );
+      const block = Block.parse(bufToStream(buf));
+      expect(block.version.toString()).to.equal("536870914");
       expect(block.prevBlock.toString("hex")).to.equal(
         "000000000000000000fd0c220a0a8c3bc5a7b487e8c8de0dfa2373b12894c38e"
       );
       expect(block.merkleRoot.toString("hex")).to.equal(
         "be258bfd38db61f957315c3f9e9c5e15216857398d50402d5089a8e0fc50075b"
       );
-      expect(block.timestamp).to.equal(1504147230n);
+      expect(block.timestamp.toString()).to.equal("1504147230");
       expect(block.bits).to.deep.equal(Buffer.from("18013ce9", "hex"));
       expect(block.nonce).to.deep.equal(Buffer.from("1dd7ffa4", "hex"));
     });

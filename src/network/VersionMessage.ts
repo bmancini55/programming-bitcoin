@@ -1,6 +1,4 @@
 import crypto from "crypto";
-import { Readable } from "stream";
-import { StreamReader } from "../util/StreamReader";
 import { combine } from "../util/BufferUtil";
 import { bigToBufLE, bigToBuf } from "../util/BigIntUtil";
 import { encodeVarint } from "../util/Varint";

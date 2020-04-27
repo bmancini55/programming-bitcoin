@@ -46,16 +46,16 @@ export class SimpleNode {
     this.socket.write(envelope.serialize());
   }
 
-  /**
-   * Reads a message from the socket
-   */
-  public async read(): Promise<NetworkEnvelope> {
-    const envelope = await NetworkEnvelope.parse(this.socket, this.testnet);
+  // /**
+  //  * Reads a message from the socket
+  //  */
+  // public async read(): Promise<NetworkEnvelope> {
+  //   const envelope = await NetworkEnvelope.parse(this.socket, this.testnet);
 
-    if (this.logging) {
-      console.log("receiving:", envelope);
-    }
+  //   if (this.logging) {
+  //     console.log("receiving:", envelope);
+  //   }
 
-    return envelope;
-  }
+  //   return envelope;
+  // }
 }

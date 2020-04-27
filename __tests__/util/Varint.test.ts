@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import * as varint from "../../src/util/Varint";
-import { TestStream } from "../TestStream";
+import { bufToStream } from "../../src/util/BufferUtil";
 
 describe("Varint", () => {
   const tests: [Buffer, bigint][] = [
@@ -17,18 +17,17 @@ describe("Varint", () => {
 
   describe("decodeVarint", () => {
     for (const test of tests) {
-      it(`0x${test[0].toString("hex")} => ${test[1]}`, async () => {
-        const stream = new TestStream(Array.from(test[0]));
-        const actual = await varint.decodeVarint(stream);
-        expect(actual).to.equal(test[1]);
+      it(`0x${test[0].toString("hex")} => ${test[1]}`, () => {
+        const actual = varint.decodeVarint(bufToStream(test[0]));
+        expect(actual.toString()).to.equal(test[1].toString());
       });
     }
   });
 
   describe("encodeVarint", () => {
     for (const test of tests) {
-      it(`${test[1]} => 0x${test[0].toString("hex")}`, async () => {
-        const actual = await varint.encodeVarint(test[1]);
+      it(`${test[1]} => 0x${test[0].toString("hex")}`, () => {
+        const actual = varint.encodeVarint(test[1]);
         expect(actual.toString("hex")).to.equal(test[0].toString("hex"));
       });
     }

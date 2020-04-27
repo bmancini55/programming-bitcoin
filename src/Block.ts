@@ -1,9 +1,8 @@
-import { Readable } from "stream";
-import { StreamReader } from "./util/StreamReader";
-import { writeBytesReverse, writeBytes } from "./util/BufferUtil";
+import { writeBytesReverse } from "./util/BufferUtil";
 import { hash256 } from "./util/Hash256";
-import { bigFromBuf } from "./util/BigIntUtil";
+import { bigFromBuf, bigFromBufLE } from "./util/BigIntUtil";
 import { bitsToTarget } from "./util/BlockUtil";
+import { Readable } from "stream";
 
 export class Block {
   /**
@@ -20,21 +19,20 @@ export class Block {
    * ```
    * @example
    * ```typescript
-   * const stream = bufToStream(Buffer.from("020000208ec39428b17323fa0ddec8e887b4a7\
+   * const buffer = Buffer.from("020000208ec39428b17323fa0ddec8e887b4a7\
    * c53b8c0a0a220cfd0000000000000000005b0750fce0a889502d40508d39576821155e9c9e3f5c\
    * 3157f961db38fd8b25be1e77a759e93c0118a4ffd71d"), "hex");
-   * const block = await Block.parse(stream);
+   * const block = await Block.parse(buffer);
    * ```
    * @param stream
    */
-  public static async parse(stream: Readable): Promise<Block> {
-    const sr = new StreamReader(stream);
-    const version = await sr.readUInt32LE();
-    const prevBlock = (await sr.read(32)).reverse(); // convert LE to BE
-    const merkleRoot = (await sr.read(32)).reverse(); // convert LE to BE
-    const timestamp = await sr.readUInt32LE();
-    const bits = (await sr.read(4)).reverse(); // convert LE to BE
-    const nonce = (await sr.read(4)).reverse(); // convert LE to BE
+  public static parse(stream: Readable): Block {
+    const version = bigFromBufLE(stream.read(4));
+    const prevBlock = stream.read(32).reverse(); // convert LE to BE
+    const merkleRoot = stream.read(32).reverse(); // convert LE to BE
+    const timestamp = bigFromBufLE(stream.read(4));
+    const bits = stream.read(4).reverse(); // convert LE to BE
+    const nonce = stream.read(4).reverse(); // convert LE to BE
     return new Block(version, prevBlock, merkleRoot, timestamp, bits, nonce);
   }
 
