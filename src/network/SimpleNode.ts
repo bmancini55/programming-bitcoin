@@ -8,7 +8,9 @@ import { VerAckMessage } from "./VerAckMessage";
 import { bufToStream, combine } from "../util/BufferUtil";
 import { PingMessage } from "./PingMessage";
 import { PongMessage } from "./PongMessage";
-import { runInThisContext } from "vm";
+import { HeadersMessage } from "./HeadersMessage";
+import { Block } from "../Block";
+import { calcNewBits } from "../util/BlockUtil";
 
 // tslint:disable-next-line: variable-name
 export const NetworkMagic = Buffer.from("f9beb4d9", "hex");
@@ -26,11 +28,15 @@ export class SimpleNode extends EventEmitter {
   public logging: boolean;
   public socket: Socket;
   public receivedVerAck: boolean;
-  public hasVersion: boolean;
+  public receivedVersion: boolean;
   public remoteVersion: VersionMessage;
   public pendingHeader: Buffer;
   public pingInterval: number = 60000; // 1 min
   public pingTimeout: number = 20 * 60000; // 20 min
+  public blocks: Block[];
+  public genesis: Block;
+  public epochStart: Block;
+  public epochBits: Buffer = Buffer.from("1d00ffff", "hex");
   private _sendPingHandle: NodeJS.Timeout;
   private _awaitPongHandle: NodeJS.Timeout;
   private _lastPing: PingMessage;
@@ -51,7 +57,12 @@ export class SimpleNode extends EventEmitter {
     this.testnet = testnet;
     this.logging = logging;
     this.receivedVerAck = false;
-    this.hasVersion = false;
+    this.receivedVersion = false;
+
+    this.genesis = testnet ? Block.testnetGensisBlock : Block.genesisBlock;
+    this.blocks = [this.genesis];
+    this.epochStart = this.genesis;
+
     this.socket = new Socket();
     this.socket.on("connect", this._onConnect.bind(this));
     this.socket.on("readable", this._onReadable.bind(this));
@@ -211,9 +222,12 @@ export class SimpleNode extends EventEmitter {
           this._onPing(ping);
           break;
         case "pong":
-          const msg = PongMessage.parse(env.payloadStream);
-          this._onPong(msg);
+          const pong = PongMessage.parse(env.payloadStream);
+          this._onPong(pong);
           break;
+        case "headers":
+          const headers = HeadersMessage.parse(env.payloadStream);
+          this._onHeaders(headers);
       }
     }
   }
@@ -262,5 +276,67 @@ export class SimpleNode extends EventEmitter {
 
     // schedule the next ping
     this._schedulePing();
+  }
+
+  /**
+   * Handles when headers arrive by validating the consensus rules for the
+   * headers and adding them to a list of block headers maintained by the node.
+   * After the headers are successfully checked, the headers_received message
+   * is emitted.
+   *
+   * The consensus rules are:
+   *   1. PoW is valid
+   *   2. The previous block is correct
+   *   3. For mainnet whether the bits are correctly set for each block
+   *
+   * @param headers
+   */
+  private _onHeaders(headers: HeadersMessage) {
+    // validate all blocks by...
+    for (const block of headers.blocks) {
+      const previous = this.blocks[this.blocks.length - 1];
+
+      // check the PoW
+      if (!block.checkProofOfWork()) {
+        throw new Error("bad PoW at block at block " + this.blocks.length);
+      }
+
+      // ensure previous block is chained correctly
+      if (!block.prevBlock.equals(previous.hash())) {
+        console.log(block.prevBlock.toString("hex"));
+        console.log(previous.hash().toString("hex"));
+        throw new Error("discontinuous block at " + this.blocks.length);
+      }
+
+      // validate expected bits if on mainnet. Can't validate the bits on
+      // testnet becuase of difficulty adjustment that can happen every 20
+      // minutes
+      if (!this.testnet) {
+        if (this.blocks.length % 2016 === 0) {
+          this.epochBits = calcNewBits(
+            this.epochStart.bits,
+            previous.timestamp - this.epochStart.timestamp
+          );
+          this.epochStart = block;
+        }
+
+        if (!block.bits.equals(this.epochBits)) {
+          throw new Error("bad bits at block " + this.blocks.length);
+        }
+      }
+
+      // add to list of tracked blocks
+      if (this.logging) {
+        console.log(
+          "node: block " +
+            this.blocks.length +
+            " " +
+            block.hash().toString("hex")
+        );
+      }
+      this.blocks.push(block);
+    }
+
+    this.emit("headers_received");
   }
 }
