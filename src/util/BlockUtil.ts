@@ -47,50 +47,37 @@ export function targetToBits(target: bigint): Buffer {
 }
 
 /**
- * Calculates a new target from the start and end blocks. This covers a period of
- * 2016 blocks. It restrricts the upper board to 8 weeks and the lower bound to
- * 3.5 days.
- *
- * The new target is calculated with the formula:
- * ```
- * target = (old * timediff) / TWO_WEEKS
- * ```
- * @param start
- * @param end
- */
-export function calcNewTarget(start: Block, end: Block): bigint {
-  const TWO_WEEKS = 86400n * 14n;
-  const UPPER_DIFF = TWO_WEEKS * 4n;
-  const LOWER_DIFF = TWO_WEEKS / 4n;
-  let timediff = end.timestamp - start.timestamp;
-
-  // greater than 8 weeks, make it 8 weeks
-  if (timediff > UPPER_DIFF) {
-    timediff = UPPER_DIFF;
-  }
-
-  // less than 3.5 days, make it 3.5 days
-  if (timediff < LOWER_DIFF) {
-    timediff = LOWER_DIFF;
-  }
-
-  const oldTarget = end.target();
-  const newTarget = (oldTarget * timediff) / TWO_WEEKS;
-  return newTarget;
-}
-
-/**
  * Calculates new bits from the start and end blocks. This covers a period of
  * 2016 blocks. It restricts the upper board to 8 weeks and the lower bound to
  * 3.5 days.
  *
  * The new target is calculated with the formula:
  * ```
- * target = (old * timediff) / TWO_WEEKS
+ * target = (oldtarget * timediff) / TWO_WEEKS
  * ```
  * The new target is then converted into bits
  */
-export function calcNewBits(start: Block, end: Block): Buffer {
-  const target = calcNewTarget(start, end);
-  return targetToBits(target);
+export function calcNewBits(prevBits: Buffer, timediff: bigint): Buffer {
+  const TWO_WEEKS = 86400 * 14;
+  const UPPER_DIFF = TWO_WEEKS * 4;
+  const LOWER_DIFF = TWO_WEEKS / 4;
+  const MAX_TARGET = BigInt(0xffff) * BigInt(256) ** BigInt(0x1d - 3);
+
+  // greater than 8 weeks, make it 8 weeks
+  if (timediff > UPPER_DIFF) {
+    timediff = BigInt(UPPER_DIFF);
+  }
+
+  // less than 3.5 days, make it 3.5 days
+  if (timediff < LOWER_DIFF) {
+    timediff = BigInt(LOWER_DIFF);
+  }
+
+  let newTarget = (bitsToTarget(prevBits) * timediff) / BigInt(TWO_WEEKS);
+
+  if (newTarget > MAX_TARGET) {
+    newTarget = MAX_TARGET;
+  }
+
+  return targetToBits(newTarget);
 }
