@@ -5,6 +5,16 @@ import { bitsToTarget } from "./util/BlockUtil";
 import { Readable } from "stream";
 
 export class Block {
+  public static genesisBlock: Buffer = Buffer.from(
+    "0100000000000000000000000000000000000000000000000000000000000000000000003ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a29ab5f49ffff001d1dac2b7c",
+    "hex"
+  );
+
+  public static testnetGenesisBlock: Buffer = Buffer.from(
+    "0100000000000000000000000000000000000000000000000000000000000000000000003ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4adae5494dffff001d1aa4ae18",
+    "hex"
+  );
+
   /**
    * Parses a block header. The previous block and merkle root are transmitted
    * in little-endian format and must be converted to big-endian. For example:
