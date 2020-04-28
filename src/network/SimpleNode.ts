@@ -1,11 +1,14 @@
 // tslint:disable: no-console
+import { EventEmitter } from "events";
 import { Socket } from "net";
 import { INetworkMessage } from "./NetworkMessage";
 import { NetworkEnvelope } from "./NetworkEnvelope";
 import { VersionMessage } from "./VersionMessage";
 import { VerAckMessage } from "./VerAckMessage";
-import { rstrip, bufToStream, combine } from "../util/BufferUtil";
-import { hash256 } from "../util/Hash256";
+import { bufToStream, combine } from "../util/BufferUtil";
+import { PingMessage } from "./PingMessage";
+import { PongMessage } from "./PongMessage";
+import { runInThisContext } from "vm";
 
 // tslint:disable-next-line: variable-name
 export const NetworkMagic = Buffer.from("f9beb4d9", "hex");
@@ -13,7 +16,10 @@ export const NetworkMagic = Buffer.from("f9beb4d9", "hex");
 // tslint:disable-next-line: variable-name
 export const TestnetNetworkMagic = Buffer.from("0b110907", "hex");
 
-export class SimpleNode {
+/**
+ *
+ */
+export class SimpleNode extends EventEmitter {
   public host: string;
   public port: bigint;
   public testnet: boolean;
@@ -22,7 +28,12 @@ export class SimpleNode {
   public receivedVerAck: boolean;
   public hasVersion: boolean;
   public remoteVersion: VersionMessage;
-  public pendingChunk: Buffer;
+  public pendingHeader: Buffer;
+  public pingInterval: number = 60000; // 1 min
+  public pingTimeout: number = 20 * 60000; // 20 min
+  private _sendPingHandle: NodeJS.Timeout;
+  private _awaitPongHandle: NodeJS.Timeout;
+  private _lastPing: PingMessage;
 
   constructor(
     host: string,
@@ -30,6 +41,7 @@ export class SimpleNode {
     testnet: boolean = false,
     logging: boolean = false
   ) {
+    super();
     this.host = host;
     if (!port) {
       if (testnet) port = 18333n;
@@ -85,6 +97,30 @@ export class SimpleNode {
   }
 
   /**
+   * Closes the peer
+   * @param reason
+   */
+  public close(reason: string) {
+    if (this.logging) {
+      console.log("node: closing", reason);
+    }
+    this.socket.end();
+  }
+
+  /**
+   * Sends a new ping message
+   */
+  public sendPing() {
+    this._awaitPongHandle = setTimeout(
+      this.close.bind(this, "ping timedout"),
+      this.pingTimeout
+    );
+    const msg = new PingMessage();
+    this._lastPing = msg;
+    this.send(msg);
+  }
+
+  /**
    * Private method that fires when the remote connection is established. In
    * this instance, the version message is sent to the remote node.
    */
@@ -96,19 +132,50 @@ export class SimpleNode {
   }
 
   /**
+   * Fires when the connection is disconnected
+   */
+  private _onClose() {
+    this._unschedulePing();
+    if (this.logging) {
+      console.log("node: closed");
+    }
+  }
+
+  /**
+   * Clears any awaiting ping/pong timeouts
+   */
+  private _unschedulePing() {
+    clearTimeout(this._sendPingHandle);
+    clearTimeout(this._awaitPongHandle);
+  }
+
+  /**
+   * Schedules the next poing
+   */
+  private _schedulePing() {
+    this._unschedulePing();
+    this._sendPingHandle = setTimeout(
+      this.sendPing.bind(this),
+      this.pingInterval
+    );
+    this._sendPingHandle.unref();
+  }
+
+  /**
    * Primate method that is triggered when there is a readable event caused by
    * data being recieved by the socket. This method will attempt to read the
    * data from the stream and take appropriate action based on the message.
    */
   private _onReadable() {
     while (true) {
-      const chunk = this.pendingChunk || this.socket.read(24);
-      if (!chunk) {
+      // read the header information
+      const header = this.pendingHeader || this.socket.read(24);
+      if (!header) {
         return;
       }
 
-      const payloadLen = chunk.slice(16, 20).readUInt32LE();
-
+      // attempt to read the payload for the ehader
+      const payloadLen = header.slice(16, 20).readUInt32LE();
       let payload: Buffer;
       if (payloadLen) {
         payload = this.socket.read(Number(payloadLen));
@@ -116,14 +183,17 @@ export class SimpleNode {
         payload = Buffer.alloc(0);
       }
 
+      // if we were unable to read the header, then we will stash the current
+      // header until more information is available on the wire
       if (!payload) {
-        this.pendingChunk = chunk;
+        this.pendingHeader = header;
         return;
       }
 
-      const stream = bufToStream(combine(chunk, payload));
+      // parse the full network envelope
+      const stream = bufToStream(combine(header, payload));
       const env = NetworkEnvelope.parse(stream, this.testnet);
-      this.pendingChunk = undefined;
+      this.pendingHeader = undefined;
 
       if (this.logging) {
         console.log("node: received", env.toString());
@@ -131,17 +201,66 @@ export class SimpleNode {
 
       switch (env.command) {
         case "verack":
-          this.receivedVerAck = true;
+          this._onVerAck();
           break;
         case "version":
-          this.sendVerAck();
+          this._onVersion();
+          break;
+        case "ping":
+          const ping = PingMessage.parse(env.payloadStream);
+          this._onPing(ping);
+          break;
+        case "pong":
+          const msg = PongMessage.parse(env.payloadStream);
+          this._onPong(msg);
           break;
       }
     }
   }
-  private _onClose() {
-    if (this.logging) {
-      console.log("node: closing");
+
+  /**
+   * Handles a verack message
+   */
+  private _onVerAck() {
+    this.receivedVerAck = true;
+  }
+
+  /**
+   *
+   */
+  private _onVersion() {
+    // send the verack message
+    this.sendVerAck();
+
+    // start the ping process
+    this._schedulePing();
+
+    // emit that the handshake is complete
+    this.emit("handshake_complete");
+  }
+
+  /**
+   * Handles an inbound ping message by sending a pong message reply
+   * @param env
+   */
+  private _onPing(ping: PingMessage) {
+    // create and send pong
+    const pong = new PongMessage(ping.nonce);
+    this.send(pong);
+  }
+
+  /**
+   * Handles a pong message by validating that it matches the corresponding
+   * ping. It then schedules the next ping.
+   * @param msg
+   */
+  private _onPong(pong: PongMessage) {
+    // abort if pong is invalid
+    if (!pong.matches(this._lastPing)) {
+      this.close("pong invalid");
     }
+
+    // schedule the next ping
+    this._schedulePing();
   }
 }

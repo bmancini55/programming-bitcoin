@@ -1,6 +1,6 @@
 import { Readable } from "stream";
 import { hash256 } from "../util/Hash256";
-import { rstrip, combine } from "../util/BufferUtil";
+import { rstrip, combine, bufToStream } from "../util/BufferUtil";
 
 // tslint:disable-next-line: variable-name
 export const NetworkMagic = Buffer.from("f9beb4d9", "hex");
@@ -76,6 +76,13 @@ export class NetworkEnvelope {
    * Indicates if on testnet
    */
   public testnet: boolean;
+
+  /**
+   * Returns the payload as a readable stream
+   */
+  public get payloadStream(): Readable {
+    return bufToStream(this.payload);
+  }
 
   constructor(command: string, payload: Buffer, testnet: boolean = false) {
     this.command = command;
