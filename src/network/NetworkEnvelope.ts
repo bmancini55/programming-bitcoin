@@ -6,7 +6,7 @@ import { rstrip, combine } from "../util/BufferUtil";
 export const NetworkMagic = Buffer.from("f9beb4d9", "hex");
 
 // tslint:disable-next-line: variable-name
-export const TestnetNetworkMagic = Buffer.from("00110907", "hex");
+export const TestnetNetworkMagic = Buffer.from("0b110907", "hex");
 
 export class NetworkEnvelope {
   /**
@@ -28,42 +28,27 @@ export class NetworkEnvelope {
     stream: Readable,
     testnet: boolean = false
   ): NetworkEnvelope {
-    // read the envelope bytes first
-    const chunk = stream.read(4 + 12 + 4 + 4);
-    if (!chunk) {
-      return chunk;
-    }
-
-    // parse and validate the magic bytes
-    const magic = chunk.slice(0, 4);
+    // read and validate the magic bytes
+    const magic = stream.read(4);
     const expectedMagic = testnet ? TestnetNetworkMagic : NetworkMagic;
     if (!expectedMagic.equals(magic)) {
-      throw new Error(
-        `magic is not right ${magic.toString(
-          "hex"
-        )}, expected ${expectedMagic.toString("hex")}`
-      );
+      throw new Error(`magic is not valid ${magic.toString("hex")}`);
     }
 
     // parse the stripped command
-    const command = rstrip(chunk.slice(4, 16), 0).toString();
+    const command = rstrip(stream.read(12), 0).toString();
 
     // parse the payload len and checksum
-    const payloadLen = chunk.slice(16, 20).readUInt32LE();
-    const payloadChecksum = chunk.slice(20);
+    const payloadLen = stream.read(4).readUInt32LE();
+    const payloadChecksum = stream.read(4);
 
-    // initialize to zero length buffer incase we don't need a read anything
-    let payload = Buffer.alloc(0);
-
-    // try to read payload bytes, if the payload bytes cant be read,
-    // then we will push read bytes back into the sterams buffer and will try
-    // again when more data is available on the stream
+    // initialize to zero length buffer incase we don't need a read anything,
+    // but otherwise read the payload
+    let payload: Buffer;
     if (payloadLen) {
       payload = stream.read(Number(payloadLen));
-      if (!payload) {
-        stream.unshift(chunk);
-        return;
-      }
+    } else {
+      payload = Buffer.alloc(0);
     }
 
     // verify the checksum

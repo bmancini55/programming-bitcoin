@@ -3,6 +3,7 @@
  * received.
  */
 export class VerAckMessage {
+  public command: string = "verack";
   public serialize() {
     return Buffer.alloc(0);
   }
