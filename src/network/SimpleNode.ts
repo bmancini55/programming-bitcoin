@@ -196,7 +196,7 @@ export class SimpleNode extends EventEmitter {
       this.pendingHeader = undefined;
 
       if (this.logging) {
-        console.log("node: received", env.toString());
+        console.log("node: received", env.toString().substring(0, 255));
       }
 
       switch (env.command) {

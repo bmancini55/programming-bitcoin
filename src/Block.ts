@@ -1,18 +1,26 @@
-import { writeBytesReverse } from "./util/BufferUtil";
+import { writeBytesReverse, bufToStream } from "./util/BufferUtil";
 import { hash256 } from "./util/Hash256";
 import { bigFromBuf, bigFromBufLE } from "./util/BigIntUtil";
 import { bitsToTarget } from "./util/BlockUtil";
 import { Readable } from "stream";
 
 export class Block {
-  public static genesisBlock: Buffer = Buffer.from(
+  public static genesisBlockBytes: Buffer = Buffer.from(
     "0100000000000000000000000000000000000000000000000000000000000000000000003ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a29ab5f49ffff001d1dac2b7c",
     "hex"
   );
 
-  public static testnetGenesisBlock: Buffer = Buffer.from(
+  public static genesisBlock: Block = Block.parse(
+    bufToStream(Block.genesisBlockBytes)
+  );
+
+  public static testnetGenesisBlockBytes: Buffer = Buffer.from(
     "0100000000000000000000000000000000000000000000000000000000000000000000003ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4adae5494dffff001d1aa4ae18",
     "hex"
+  );
+
+  public static testnetGensisBlock: Block = Block.parse(
+    bufToStream(Block.testnetGenesisBlockBytes)
   );
 
   /**
