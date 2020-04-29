@@ -8,6 +8,16 @@ import { Block } from "../../src/Block";
 import { bufToStream } from "../../src/util/BufferUtil";
 
 describe("Block Utilities", () => {
+  describe(".bitsToTarget", () => {
+    it("calcs", () => {
+      const bits = Buffer.from("181bc330", "hex");
+      const target = bitsToTarget(bits);
+      expect(target.toString(16)).to.equal(
+        "1bc330000000000000000000000000000000000000000000"
+      );
+    });
+  });
+
   describe(".targetToBits()", () => {
     it("coefficient < 0x80", () => {
       const bits = Buffer.from("18013ce9", "hex");

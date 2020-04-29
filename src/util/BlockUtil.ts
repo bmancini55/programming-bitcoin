@@ -3,9 +3,11 @@ import { bigToBuf } from "./BigIntUtil";
 import { lstrip, combine } from "./BufferUtil";
 
 /**
- * Converts the bits as 4-byte big-endian value into the numeric target.
- * Target is calculated as:
+ * Converts the bits as 4-byte big-endian value into the numeric target. For
+ * example the value 0x181bc330 has the exponent of 0x18 and the coefficient of
+ * 0x1bc330.
  *
+ * Target is calculated as:
  * ```
  * target = coefficient * 256^(exponent-3)
  * ```
