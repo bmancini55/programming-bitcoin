@@ -3,6 +3,7 @@ import { hash256 } from "./util/Hash256";
 import { bigFromBuf, bigFromBufLE } from "./util/BigIntUtil";
 import { bitsToTarget } from "./util/BlockUtil";
 import { Readable } from "stream";
+import * as merkleUtil from "./util/MerkleUtil";
 
 export class Block {
   public static genesisBlockBytes: Buffer = Buffer.from(
@@ -29,8 +30,8 @@ export class Block {
    *
    * ```
    * 02000020 - version, 4-byte LE
-   * 8ec39428b17323fa0ddec8e887b4a7c53b8c0a0a220cfd000000000000000000 - previous block, 32-bytes LE
-   * 5b0750fce0a889502d40508d39576821155e9c9e3f5c3157f961db38fd8b25be - merkle root, 32-bytes LE
+   * 8ec39428b17323fa0ddec8e887b4a7c53b8c0a0a220cfd000000000000000000 - previous block, 32-bytes, internal order (LE)
+   * 5b0750fce0a889502d40508d39576821155e9c9e3f5c3157f961db38fd8b25be - merkle root, 32-bytes, internal order (LE)
    * 1e77a759 - timestamp, 4-byte LE
    * e93c0118 - bits, 4-byte LE
    * a4ffd71d - nonce, 4-byte LE
@@ -46,8 +47,8 @@ export class Block {
    */
   public static parse(stream: Readable): Block {
     const version = bigFromBufLE(stream.read(4));
-    const prevBlock = stream.read(32).reverse(); // convert LE to BE
-    const merkleRoot = stream.read(32).reverse(); // convert LE to BE
+    const prevBlock = stream.read(32).reverse(); // convert to RPC byte order
+    const merkleRoot = stream.read(32).reverse(); // convert to RPC byte order
     const timestamp = bigFromBufLE(stream.read(4));
     const bits = stream.read(4).reverse(); // convert LE to BE
     const nonce = stream.read(4).reverse(); // convert LE to BE
@@ -96,6 +97,12 @@ export class Block {
   public nonce: Buffer;
 
   /**
+   * List of transaction hashes for the block that are provided in RPC hash
+   * byte order (big-endian).
+   */
+  public txHashes: string[];
+
+  /**
    * Represents a Block
    * @param version
    * @param prevBlock
@@ -118,17 +125,18 @@ export class Block {
     this.timestamp = timestamp;
     this.bits = bits;
     this.nonce = nonce;
+    this.txHashes = [];
   }
 
   /**
    * Serializes the block into a Buffer according to the following information
    *
    * version - 4 bytes LE
-   * previous block - 32 bytes LE
-   * merkle root - 32 bytes LE
+   * previous block - 32 bytes, internal order (LE)
+   * merkle root - 32 bytes, internal order (LE)
    * timestamp - 4 bytes LE
    * bits - 4 bytes LE
-   * nonce - 4 bytes
+   * nonce - 4 bytes LE
    */
   public serialize(): Buffer {
     const result = Buffer.alloc(4 + 32 + 32 + 4 + 4 + 4);
@@ -138,11 +146,11 @@ export class Block {
     result.writeUInt32LE(Number(this.version), offset);
     offset += 4;
 
-    // previous block, 32 bytes LE
+    // previous block, 32 bytes, internal byte order
     writeBytesReverse(this.prevBlock, result, offset);
     offset += 32;
 
-    // merkle root, 32 bytes LE
+    // merkle root, 32 bytes, internal byte order
     writeBytesReverse(this.merkleRoot, result, offset);
     offset += 32;
 
@@ -162,9 +170,12 @@ export class Block {
   }
 
   /**
-   * Returns the `hash256` of the block header in little-endian. This value will
-   * have leading zeros and looks like:
+   * Returns the `hash256` of the block header in RPC byte order. This value
+   * will have leading zeros and looks like:
    * 0000000000000000007e9e4c586439b0cdbe13b1370bdd9435d76a644d047523
+   *
+   * Because this value can be directly converted into a hexidecimal number
+   * that can be compared to the target, it is considered big-endian.
    */
   public hash(): Buffer {
     return hash256(this.serialize()).reverse();
@@ -245,5 +256,24 @@ export class Block {
    */
   public checkProofOfWork(): boolean {
     return bigFromBuf(this.hash()) < this.target();
+  }
+
+  /**
+   * Validates the merkle root agains the txhashes. This has a wrinkle because
+   * of ordering of the hashes and the merkle root. So we need to first reverse
+   * the order of the supplied txids and then reverse the order of the
+   * calculated merkle root before doing the comparison to the one in our block
+   * header.
+   */
+  public validateMerkleRoot() {
+    // convert all of the txhashes into internal byte order
+    const hashes = this.txHashes.map(p => Buffer.from(p, "hex").reverse());
+
+    // calculate the merkle root
+    const root = merkleUtil.merkleRoot(hashes);
+
+    // compare the RPC byte order merkle root with the RPC byte order of the
+    // freshly calculated merkle root
+    return this.merkleRoot.equals(root.reverse());
   }
 }

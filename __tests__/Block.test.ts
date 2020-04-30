@@ -223,4 +223,38 @@ c53b8c0a0a220cfd0000000000000000005b0750fce0a889502d40508d39576821155e9c9e3f5c\
       expect(block.checkProofOfWork()).to.equal(false);
     });
   });
+
+  describe(".validateMerkleRoot", () => {
+    it("validates", () => {
+      // 0000000000000451fa80fcdb243b84c35eaae215a85a8faa880559e8239e6f20
+      const block = new Block(
+        BigInt(0x20000000),
+        Buffer.from(
+          "000000000000010466f487e7d9c7557fda40b79852b00bee762505f5175f4cd0",
+          "hex"
+        ),
+        Buffer.from(
+          "4297fb95a0168b959d1469410c7527da5d6243d99699e7d041b7f3916ba93301",
+          "hex"
+        ),
+        BigInt(1504242100),
+        Buffer.from("1a06ca16", "hex"),
+        Buffer.from("d8927c4a", "hex")
+      );
+      block.txHashes = [
+        "42f6f52f17620653dcc909e58bb352e0bd4bd1381e2955d19c00959a22122b2e",
+        "94c3af34b9667bf787e1c6a0a009201589755d01d02fe2877cc69b929d2418d4",
+        "959428d7c48113cb9149d0566bde3d46e98cf028053c522b8fa8f735241aa953",
+        "a9f27b99d5d108dede755710d4a1ffa2c74af70b4ca71726fa57d68454e609a2",
+        "62af110031e29de1efcad103b3ad4bec7bdcf6cb9c9f4afdd586981795516577",
+        "766900590ece194667e9da2984018057512887110bf54fe0aa800157aec796ba",
+        "e8270fb475763bc8d855cfe45ed98060988c1bdcad2ffc8364f783c98999a208",
+        "921b8cfd3e14bf41f028f0a3aa88c813d5039a2b1bceb12208535b0b43a5d09e",
+        "15535864799652347cec66cba473f6d8291541238e58b2e03b046bc53cfe1321",
+        "1c8af7c502971e67096456eac9cd5407aacf62190fc54188995666a30faf99f0",
+        "3311f8acc57e8a3e9b68e2945fb4f53c07b0fa4668a7e5cda6255c21558c774d",
+      ];
+      expect(block.validateMerkleRoot()).to.equal(true);
+    });
+  });
 });
