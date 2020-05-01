@@ -25,8 +25,8 @@ export class MerkleTree {
   public depth: number;
   public rootNode: MerkleTreeNode;
 
-  public get rootHex() {
-    return Buffer.from(this.rootNode.hash).toString("hex");
+  public get merkleRoot() {
+    return Buffer.from(this.rootNode.hash);
   }
 
   public static fromHashes(hashes: Buffer[]) {
@@ -35,6 +35,15 @@ export class MerkleTree {
 
     while (children.length > 1) {
       const parents = [];
+
+      // if odd, duplicate last node
+      if (children.length % 2 === 1) {
+        const last = children[children.length - 1];
+        const dup = new MerkleTreeNode(last.hash);
+        children.push(dup);
+      }
+
+      // combine lefts and rights
       for (let i = 0; i < children.length; i += 2) {
         const parent = new MerkleTreeNode();
         parent.left = children[i];
@@ -74,8 +83,8 @@ export class MerkleTree {
       node.depth = depth;
       node.set = set;
 
-      // leaf node of interest that the hash was provided for us
-      if (set && depth === maxDepth) {
+      // leaf node
+      if (depth === maxDepth) {
         node.hash = hashes.shift();
       }
       // need to traverse, then build!
