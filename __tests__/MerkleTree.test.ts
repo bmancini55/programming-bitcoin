@@ -7,7 +7,7 @@ describe("MerkleTree", () => {
       const hashes = ["00".repeat(32)].map(p => Buffer.from(p, "hex"));
 
       const result = MerkleTree.fromHashes(hashes);
-      expect(result.merkleRoot.toString("hex")).to.equal("00".repeat(32));
+      expect(result.hash.toString("hex")).to.equal("00".repeat(32));
     });
 
     it("2 hashes", () => {
@@ -17,7 +17,7 @@ describe("MerkleTree", () => {
 
       const result = MerkleTree.fromHashes(hashes);
 
-      expect(result.merkleRoot.toString("hex")).to.equal(
+      expect(result.hash.toString("hex")).to.equal(
         // hash256(combine(hashes[0], hashes[1])).reverse().toString("hex")
         "127e4900feebf53bb61ecc03d9a628da770e4f8ef65cfd6d40852cd9a553b3d5"
       );
@@ -45,7 +45,7 @@ describe("MerkleTree", () => {
 
       const result = MerkleTree.fromHashes(hashes);
 
-      expect(result.merkleRoot.toString("hex")).to.equal(
+      expect(result.hash.toString("hex")).to.equal(
         "597c4bafe3832b17cbbabe56f878f4fc2ad0f6a402cee7fa851a9cb205f87ed1"
       );
     });
@@ -74,7 +74,7 @@ describe("MerkleTree", () => {
 
       const result = MerkleTree.fromHashes(hashes);
 
-      expect(result.merkleRoot.reverse().toString("hex")).to.equal(
+      expect(Buffer.from(result.hash).reverse().toString("hex")).to.equal(
         "f2710c8f3652ec6bfe79769458ae4be8117cad46964ce9dab9ce570bcb2ff9b0"
       );
     });
@@ -85,7 +85,7 @@ describe("MerkleTree", () => {
       const hashes = ["00".repeat(32)].map(p => Buffer.from(p, "hex"));
 
       const result = MerkleTree.fromProof(1n, 0n, hashes);
-      expect(result.merkleRoot.toString("hex")).to.equal("00".repeat(32));
+      expect(result.hash.toString("hex")).to.equal("00".repeat(32));
     });
 
     it("2 hash", () => {
@@ -95,7 +95,7 @@ describe("MerkleTree", () => {
 
       const result = MerkleTree.fromProof(2n, BigInt(0b101), hashes);
 
-      expect(result.merkleRoot.toString("hex")).to.equal(
+      expect(result.hash.toString("hex")).to.equal(
         "127e4900feebf53bb61ecc03d9a628da770e4f8ef65cfd6d40852cd9a553b3d5"
       );
     });
@@ -124,7 +124,7 @@ describe("MerkleTree", () => {
       const total = 16n;
       const flags = BigInt("0b0101101101101"); // reversed preorder dfs
       const result = MerkleTree.fromProof(total, flags, hashes);
-      expect(result.merkleRoot.toString("hex")).to.equal(
+      expect(result.hash.toString("hex")).to.equal(
         "597c4bafe3832b17cbbabe56f878f4fc2ad0f6a402cee7fa851a9cb205f87ed1"
       );
     });
@@ -143,7 +143,7 @@ describe("MerkleTree", () => {
       const total = 18n;
       const flags = BigInt("0b00000111111"); // dfs order: 11111100000
       const result = MerkleTree.fromProof(total, flags, hashes);
-      expect(result.merkleRoot.reverse().toString("hex")).to.equal(
+      expect(Buffer.from(result.hash).reverse().toString("hex")).to.equal(
         "f2710c8f3652ec6bfe79769458ae4be8117cad46964ce9dab9ce570bcb2ff9b0"
       );
     });

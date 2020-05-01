@@ -1,103 +1,144 @@
 import { merkleParent } from "./util/MerkleUtil";
 
-export class MerkleTreeNode {
-  public depth: number;
-  public set: boolean;
-  public left: MerkleTreeNode;
-  public right: MerkleTreeNode;
+/**
+ * Node/pointer based merkle tree that can be constructed from a list of hashes
+ * or constructed from a merkle inclusion proof that is used with Bitcoin. This
+ * class is not concerned with byte-ordering. That is the responsibility of the
+ * consumer!
+ */
+export class MerkleTree {
+  /**
+   * Constructs a full merkle tree from the supplied hashes. The supplied hashes
+   * are the leaves of the tree. This performs a bottom up construction where
+   * each level is created by combining two nodes from below. If there are an
+   * odd number of nodes at the level, the last value is duplicated. The
+   * construction stops when there is only a single node and this is the root.
+   * @param hashes
+   */
+  public static fromHashes(hashes: Buffer[]): MerkleTree {
+    // convert the initial hashes into leaf nodes
+    let children = hashes.map(p => new MerkleTree(p));
+
+    // continue looping until there is only a single node
+    while (children.length > 1) {
+      const parents = [];
+
+      // if odd number of nodes, duplicate last node
+      if (children.length % 2 === 1) {
+        const last = children[children.length - 1];
+        const dup = new MerkleTree(last.hash);
+        children.push(dup);
+      }
+
+      // pair up nodes and construct a parent from the pair
+      for (let i = 0; i < children.length; i += 2) {
+        const parent = new MerkleTree();
+        parent.left = children[i];
+        parent.right = children[i + 1];
+        parent.setHash();
+        parents.push(parent);
+      }
+
+      // all pairs have been made so we can now move up a level in our tree
+      children = parents;
+    }
+
+    // return the single node, which is the root
+    return children[0];
+  }
+
+  /**
+   * Creates a merkle tree from the provided information send in a merkleblock
+   * command. This command does not send all hashes, but only includes the ones
+   * necessary to create the merkle root. In order to interpret the meaning of
+   * the hashes, a bits field is used. The argorihtm uses a pre-order traversal
+   * to interpret the bits (starting at the root).
+   *
+   * In practice, nodes that we need to calculate are skipped and we traverse
+   * until we encounter hash values that have been provided. With those hash
+   * values we can traverse back up the tree and perform the calculations that
+   * were originally skipped.
+   *
+   * @param total hashes
+   * @param bits indicate the meaning of the hashes
+   * @param hashes list of hashes
+   */
+  public static fromProof(
+    total: bigint,
+    bits: bigint,
+    hashes: Buffer[]
+  ): MerkleTree {
+    // create copy of hashes so we can shift values from the front as needed
+    hashes = hashes.slice();
+
+    // calculate the max depth of the tree which is ceil(log2(h))
+    const leafDepth = Math.ceil(Math.log2(Number(total)));
+
+    // pre-order construction starting at depth 0
+    return construct(0);
+
+    // performs a pre-order constrution of the merkle tree. Pre-order means we
+    // traverse the tree in order: root, left, right. In this instance, we
+    // construct a new node first, then determine if we need to perform any
+    // traversals
+    function construct(depth: number) {
+      // read and remove the least-significant bit which will provide meaning
+      // to the hashes that were provided
+      const bit = bits & 1n;
+      bits = bits >> 1n;
+
+      // construct our node (pre-order)
+      const node = new MerkleTree();
+
+      // leaf node always shifts off a hash value becuase it will either be a
+      // target (bit=1) and include a hash or it will be included hash (bit=0).
+      // either way, there is no need to traverse further.
+      if (depth === leafDepth) {
+        node.hash = hashes.shift();
+      }
+
+      // since the bit is set we are responsible for calculating the hash,
+      // we need to continue the traversal (left, then right) and can compute
+      // the hash once the traversal is complete (and we have what we need).
+      else if (bit === 1n) {
+        node.left = construct(depth + 1);
+        node.right = construct(depth + 1);
+        node.setHash();
+      }
+
+      // when bit=0, we are given the hash value since it counters are target
+      else {
+        node.hash = hashes.shift();
+      }
+
+      return node;
+    }
+  }
+
+  /**
+   * Left subtree
+   */
+  public left: MerkleTree;
+
+  /**
+   * Right subtree
+   */
+  public right: MerkleTree;
+
+  /**
+   * Hash that is either provide or populated via calcHash method
+   */
   public hash: Buffer;
 
   constructor(hash?: Buffer) {
     this.hash = hash;
   }
 
-  public calcHash() {
+  /**
+   * Calculates and sets the hash for the node by concatenating the left and
+   * right hash values and performing a hash256 on the combined data.
+   */
+  public setHash() {
     this.hash = merkleParent(this.left.hash, this.right.hash);
-  }
-}
-
-// tslint:disable-next-line: max-classes-per-file
-export class MerkleTree {
-  public total: bigint;
-  public maxDepth: number;
-  public bits: bigint;
-  public hashes: Buffer[];
-  public depth: number;
-  public rootNode: MerkleTreeNode;
-
-  public get merkleRoot() {
-    return Buffer.from(this.rootNode.hash);
-  }
-
-  public static fromHashes(hashes: Buffer[]) {
-    // convert the initial hashes into leaf nodes
-    let children = hashes.map(p => new MerkleTreeNode(p));
-
-    while (children.length > 1) {
-      const parents = [];
-
-      // if odd, duplicate last node
-      if (children.length % 2 === 1) {
-        const last = children[children.length - 1];
-        const dup = new MerkleTreeNode(last.hash);
-        children.push(dup);
-      }
-
-      // combine lefts and rights
-      for (let i = 0; i < children.length; i += 2) {
-        const parent = new MerkleTreeNode();
-        parent.left = children[i];
-        parent.right = children[i + 1];
-        parent.calcHash();
-        parents.push(parent);
-      }
-      children = parents;
-    }
-
-    const result = new MerkleTree();
-    result.rootNode = children[0];
-    result.total = BigInt(hashes.length);
-    result.maxDepth = Math.ceil(Math.log2(Number(hashes.length)));
-    result.hashes = hashes;
-    return result;
-  }
-
-  public static fromProof(total: bigint, bits: bigint, hashes: Buffer[]) {
-    hashes = hashes.slice();
-    const maxDepth = Math.ceil(Math.log2(Number(total)));
-    const root = traverse(0);
-
-    const result = new MerkleTree();
-    result.total = total;
-    result.bits = bits;
-    result.hashes = hashes;
-    result.maxDepth = maxDepth;
-    result.rootNode = root;
-    return result;
-
-    function traverse(depth: number) {
-      const set = (bits & 1n) === 1n;
-      bits = bits >> 1n;
-
-      const node = new MerkleTreeNode();
-      node.depth = depth;
-      node.set = set;
-
-      // leaf node
-      if (depth === maxDepth) {
-        node.hash = hashes.shift();
-      }
-      // need to traverse, then build!
-      else if (set) {
-        node.left = traverse(depth + 1);
-        node.right = traverse(depth + 1);
-        node.calcHash();
-      }
-      // set is false and we are given this hash so use it
-      else {
-        node.hash = hashes.shift();
-      }
-      return node;
-    }
   }
 }
