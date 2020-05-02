@@ -23,7 +23,7 @@ export function encodeNum(num: bigint): Buffer {
     if (neg) {
       bytes.push(0x80);
     } else {
-      bytes.push(0);
+      bytes.push(0x00);
     }
   }
 
@@ -60,14 +60,11 @@ export function decodeNum(buf: Buffer): bigint {
   // when the 0x80 bit is set on the first number
   if (be[0] & 0x80) {
     neg = true;
-    result = BigInt(be[0]) & BigInt(0x7f); // remove the 0x80 bit
+    be[0] = be[0] & 0x7f; // remove the 0x80 bit
   }
 
-  // not a negative number
-  else {
-    neg = false;
-    result = BigInt(be[0]);
-  }
+  // set result to MSB
+  result = BigInt(be[0]);
 
   // read each byte off the buffer
   for (let i = 1; i < be.length; i++) {
