@@ -1,6 +1,7 @@
 import { bigFromBufLE, bigFromBuf } from "./util/BigIntUtil";
 import { Readable } from "stream";
 import { decodeVarint } from "./util/Varint";
+import { MerkleTree } from "./MerkleTree";
 
 export class MerkleBlock {
   public static parse(stream: Readable): MerkleBlock {
@@ -19,7 +20,7 @@ export class MerkleBlock {
     }
 
     const flagsLen = decodeVarint(stream); // varint
-    const flags = bigFromBuf(stream.read(Number(flagsLen))); // flags
+    const flags = bigFromBufLE(stream.read(Number(flagsLen))); // flags
 
     return new MerkleBlock(
       version,
@@ -64,5 +65,20 @@ export class MerkleBlock {
     this.total = total;
     this.hashes = hashes;
     this.flags = flags;
+  }
+
+  /**
+   * Returns true if the reconsturction of the MerkleTree matches the provided
+   * merkle root.
+   */
+  public isValid() {
+    // first convert the hashes back to internal byte-order
+    const hashes = this.hashes.map(h => Buffer.from(h).reverse());
+
+    // reconstruct the tree
+    const merkleTree = MerkleTree.fromProof(this.total, this.flags, hashes);
+
+    // return if the tree matches the provided merkle root
+    return this.merkleroot.equals(Buffer.from(merkleTree.hash).reverse());
   }
 }

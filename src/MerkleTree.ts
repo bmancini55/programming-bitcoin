@@ -23,18 +23,13 @@ export class MerkleTree {
     while (children.length > 1) {
       const parents = [];
 
-      // if odd number of nodes, duplicate last node
-      if (children.length % 2 === 1) {
-        const last = children[children.length - 1];
-        const dup = new MerkleTree(last.hash);
-        children.push(dup);
-      }
-
       // pair up nodes and construct a parent from the pair
       for (let i = 0; i < children.length; i += 2) {
         const parent = new MerkleTree();
         parent.left = children[i];
-        parent.right = children[i + 1];
+        if (children[i + 1]) {
+          parent.right = children[i + 1];
+        }
         parent.setHash();
         parents.push(parent);
       }
@@ -75,7 +70,14 @@ export class MerkleTree {
     const leafDepth = Math.ceil(Math.log2(Number(total)));
 
     // pre-order construction starting at depth 0
-    return construct(0);
+    const root = construct(0);
+
+    // verify that everything was consumed
+    if (bits > 0n || hashes.length) {
+      throw new Error("construction failed");
+    }
+
+    return root;
 
     // performs a pre-order constrution of the merkle tree. Pre-order means we
     // traverse the tree in order: root, left, right. In this instance, we
@@ -92,9 +94,11 @@ export class MerkleTree {
 
       // leaf node always shifts off a hash value becuase it will either be a
       // target (bit=1) and include a hash or it will be included hash (bit=0).
-      // either way, there is no need to traverse further.
+      // either way, there is no need to traverse further. Return null if no
+      // hashes left as this is a odd node and will be duplicated.
       if (depth === leafDepth) {
         node.hash = hashes.shift();
+        if (!node.hash) return;
       }
 
       // since the bit is set we are responsible for calculating the hash,
@@ -106,9 +110,12 @@ export class MerkleTree {
         node.setHash();
       }
 
-      // when bit=0, we are given the hash value since it counters are target
+      // when bit=0, we are given the hash value since it counters are target.
+      // Return null if no hashes left as this is a odd node and will be
+      // duplicated.
       else {
         node.hash = hashes.shift();
+        if (!node.hash) return;
       }
 
       return node;
@@ -136,9 +143,12 @@ export class MerkleTree {
 
   /**
    * Calculates and sets the hash for the node by concatenating the left and
-   * right hash values and performing a hash256 on the combined data.
+   * right hash values and performing a hash256 on the combined data. If the
+   * right node is missing, just duplicate the left
    */
   public setHash() {
-    this.hash = merkleParent(this.left.hash, this.right.hash);
+    const left = this.left.hash;
+    const right = this.right ? this.right.hash : left;
+    this.hash = merkleParent(left, right);
   }
 }
