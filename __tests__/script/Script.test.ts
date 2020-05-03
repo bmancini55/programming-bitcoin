@@ -169,4 +169,23 @@ describe("Script", () => {
       expect(script.isP2pkhScriptPubKey()).to.equal(true);
     });
   });
+
+  describe(".address()", () => {
+    it("p2pkh", () => {
+      const p1 = new PrivateKey(1n);
+      const script = p2pkhScript(p1.point.hash160());
+      expect(script.address(true)).to.equal(
+        "mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r"
+      );
+    });
+
+    it("p2sh", () => {
+      const p1 = new PrivateKey(1n);
+      const p2pkh = p2pkhScript(p1.point.hash160());
+      const p2sh = p2shScript(p2pkh.hash160());
+      expect(p2sh.address(true)).to.equal(
+        "2N1CKkS4q22M5RgSBRmFwHYVNqNmLuf94c9"
+      );
+    });
+  });
 });
