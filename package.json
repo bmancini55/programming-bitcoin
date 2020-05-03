@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "ts-node src/Daemon.ts",
+    "start:10": "ts-node src/_Daemon10.ts",
+    "start:12": "ts-node src/_Daemon12.ts",
     "test": "mocha --require ts-node/register --recursive \"__tests__/**/*.test.ts\""
   },
   "repository": {
