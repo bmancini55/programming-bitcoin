@@ -142,7 +142,7 @@ describe("Script", () => {
   });
 
   describe(".isP2shScriptPubKey", () => {
-    it("false when not p2pkh script pub key", () => {
+    it("false when not p2sh script pub key", () => {
       const p1 = new PrivateKey(1n);
       const script = p2pkhScript(p1.point.hash160());
       expect(script.isP2shScriptPubKey()).to.equal(false);
@@ -152,6 +152,21 @@ describe("Script", () => {
       const script = new Script([OpCode.OP_2]);
       const scriptPubKey = p2shScript(script.hash160());
       expect(scriptPubKey.isP2shScriptPubKey()).to.equal(true);
+    });
+  });
+
+  describe(".isP2pkhScriptPubkey", () => {
+    it("false when not p2pkh script pub key", () => {
+      const p1 = new PrivateKey(1n);
+      const script = new Script([OpCode.OP_2]);
+      const scriptPubKey = p2shScript(script.hash160());
+      expect(scriptPubKey.isP2pkhScriptPubKey()).to.equal(false);
+    });
+
+    it("true when p2pkh script pub key", () => {
+      const p1 = new PrivateKey(1n);
+      const script = p2pkhScript(p1.point.hash160());
+      expect(script.isP2pkhScriptPubKey()).to.equal(true);
     });
   });
 });

@@ -9,7 +9,7 @@ import { opHash160 } from "./operations/crypto/OpHash160";
 import { opEqual } from "./operations/bitwise/OpEqual";
 import { opVerify } from "./operations/flowcontrol/OpVerify";
 import { hash160 } from "../util/Hash160";
-import { p2shAddress } from "../util/Address";
+import { p2shAddress, p2pkhAddress } from "../util/Address";
 
 /**
  *
@@ -306,7 +306,11 @@ export class Script {
    * @param testnet
    */
   public address(testnet: boolean = false): string {
-    return p2shAddress(this.hash160(), testnet);
+    if (this.isP2shScriptPubKey()) {
+      return p2shAddress(this.hash160(), testnet);
+    } else if (this.isP2pkhScriptPubKey()) {
+      return p2pkhAddress(this.cmds[2] as Buffer, testnet);
+    }
   }
 
   /**
@@ -323,6 +327,27 @@ export class Script {
       this.cmds[0] === OpCode.OP_HASH160 &&
       (this.cmds[1] as Buffer).length === 20 &&
       this.cmds[2] === OpCode.OP_EQUAL
+    );
+  }
+
+  /**
+   * Returns true if the script matches the pattern for a P2PKH script pubkey
+   * which has 4 elements:
+   *
+   * OP_DUP
+   * OP_HASH160
+   * OP_PUSHBYTES_20 <hash>
+   * OP_EQUALVERIFY,
+   * OP_CHECKSIG
+   */
+  public isP2pkhScriptPubKey(): boolean {
+    return (
+      this.cmds.length === 5 &&
+      this.cmds[0] === OpCode.OP_DUP &&
+      this.cmds[1] === OpCode.OP_HASH160 &&
+      (this.cmds[2] as Buffer).length === 20 &&
+      this.cmds[3] === OpCode.OP_EQUALVERIFY &&
+      this.cmds[4] === OpCode.OP_CHECKSIG
     );
   }
 }
