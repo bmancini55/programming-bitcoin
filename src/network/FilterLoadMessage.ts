@@ -10,7 +10,10 @@ export class FilterLoadMessage implements INetworkMessage {
   constructor(readonly bloomFilter: BloomFilter) {}
 
   public serialize(): Buffer {
-    const data = bigToBufLE(this.bloomFilter.bits);
+    const data = bigToBufLE(
+      this.bloomFilter.bits,
+      Number(this.bloomFilter.size)
+    );
     return combine(
       encodeVarint(data.length),
       data,
