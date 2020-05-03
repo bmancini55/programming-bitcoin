@@ -4,23 +4,44 @@ import { decodeVarint } from "./util/Varint";
 import { MerkleTree } from "./MerkleTree";
 
 export class MerkleBlock {
+  /**
+   * Parses a merkelblock command. This essentially contains the information
+   * used in a standard block plus the inclusion of information needed to
+   * construct the partial merkle tree.
+   *
+   * version - 4 bytes LE,
+   * prev_block - 32 bytes IBO
+   * merkle_root - 32 bytes IBO
+   * timestamp - 4 bytes LE
+   * bits - 4 bytes IBO
+   * nonce - 4 bytes IBO
+   *
+   * total - 4 bytes LE
+   * numHashes - varint
+   * hashes - 32-bytes * numHashes
+   * flagsLen - varint
+   * flags - bytes LE
+   *
+   * @param stream
+   */
   public static parse(stream: Readable): MerkleBlock {
-    const version = bigFromBufLE(stream.read(4));
-    const prevBlock = stream.read(32).reverse(); // convert from internal order
-    const merkleRoot = stream.read(32).reverse(); // convert from internal order
-    const timestamp = bigFromBufLE(stream.read(4));
-    const bits = stream.read(4).reverse(); // convert LE to BE
-    const nonce = stream.read(4).reverse(); // convert LE to BE
-    const total = bigFromBufLE(stream.read(4)); // varint
+    // stadnard block header data - 80 bytes
+    const version = bigFromBufLE(stream.read(4)); // 4 bytes, LE
+    const prevBlock = stream.read(32).reverse(); // 32 bytes, IBO
+    const merkleRoot = stream.read(32).reverse(); // 32 bytes, IBO
+    const timestamp = bigFromBufLE(stream.read(4)); // 4 bytes, LE
+    const bits = stream.read(4).reverse(); // 4 bytes, IBO
+    const nonce = stream.read(4).reverse(); // 4 bytes, IBO
 
-    const numHashes = decodeVarint(stream);
+    // additional data needed to parse the partial merkle tree
+    const totalTxs = bigFromBufLE(stream.read(4)); // 4 bytes LE
+    const numHashes = decodeVarint(stream); // num hashes, varint
     const hashes = [];
     for (let i = 0n; i < numHashes; i++) {
-      hashes.push(stream.read(32).reverse()); // conert to RPC byte order
+      hashes.push(stream.read(32).reverse()); // 32 bytes, IBO
     }
-
     const flagsLen = decodeVarint(stream); // varint
-    const flags = bigFromBufLE(stream.read(Number(flagsLen))); // flags
+    const flags = bigFromBufLE(stream.read(Number(flagsLen))); // flags, LE
 
     return new MerkleBlock(
       version,
@@ -29,20 +50,56 @@ export class MerkleBlock {
       timestamp,
       bits,
       nonce,
-      total,
+      totalTxs,
       hashes,
       flags
     );
   }
 
+  /**
+   * Version of the block
+   */
   public version: bigint;
+
+  /**
+   * Previous block in RPC byte order
+   */
   public prevBlock: Buffer;
+
+  /**
+   * Merkle root as 32-bytes in RPC byte order.
+   */
   public merkleroot: Buffer;
+
+  /**
+   * Unix style timestamp which is the number of seconds elapsed since
+   * January 1, 1970. This value will eventually overflow in 2106.
+   */
   public timestamp: bigint;
+
+  /**
+   * Bits, compact encoding of the target in RPC byte order
+   */
   public bits: Buffer;
+
+  /**
+   * Nonce in RCP byte order
+   */
   public nonce: Buffer;
+
+  /**
+   * Total number of transactions in the block
+   */
   public total: bigint;
+
+  /**
+   * Hashes that will be used to construct the partial merkle tree
+   */
   public hashes: Buffer[];
+
+  /**
+   * Flags used to construct the partial merkle tree.
+   */
   public flags: bigint;
 
   constructor(
