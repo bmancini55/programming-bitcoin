@@ -4,12 +4,14 @@ import { bigToBufLE, bigFromBufLE } from "./util/BigIntUtil";
 import { TxFetcher } from "./TxFetcher";
 import { Tx } from "./Tx";
 import { Script } from "./script/Script";
+import { ScriptCmd } from "./script/ScriptCmd";
 
 export class TxIn {
   public prevTx: string;
   public prevIndex: bigint;
   public scriptSig: Script;
   public sequence: bigint;
+  public witness: ScriptCmd[];
 
   /**
    * Parses a TxIn from a stream

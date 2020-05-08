@@ -12,6 +12,8 @@ import {
 import { encodeVarint, decodeVarint } from "./util/Varint";
 import { Script } from "./script/Script";
 import { PrivateKey } from "./ecc/PrivateKey";
+import { ScriptCmd } from "./script/ScriptCmd";
+import { OpCode } from "./script/OpCode";
 
 export class Tx {
   public version: bigint;
@@ -19,8 +21,74 @@ export class Tx {
   public readonly txOuts: TxOut[];
   public locktime: bigint;
   public testnet: boolean;
+  public segwit: boolean;
 
   public static parse(stream: Readable, testnet: boolean = false): Tx {
+    // read the first 5 bytes, 4-version, 1-flag???
+    const bytes = stream.read(5);
+
+    // unshift the flag and version before parsing
+    stream.unshift(bytes);
+
+    if (bytes[4] === 0x00) {
+      return this.parseSegwit(stream, testnet);
+    } else {
+      return this.parseLegacy(stream, testnet);
+    }
+  }
+
+  public static parseSegwit(stream: Readable, testnet: boolean = false): Tx {
+    // get the version
+    const version = bigFromBufLE(stream.read(4));
+
+    // read and test marker
+    const marker = stream.read(2);
+    if (marker[0] !== 0x00 || marker[1] !== 0x01) {
+      throw new Error("Not a segwit transaction " + marker.toString("hex"));
+    }
+
+    // vin
+    const vinLen = decodeVarint(stream);
+    const vins: TxIn[] = [];
+    for (let i = 0n; i < vinLen; i++) {
+      vins.push(TxIn.parse(stream));
+    }
+
+    // vout
+    const voutLen = decodeVarint(stream);
+    const vouts: TxOut[] = [];
+    for (let i = 0n; i < voutLen; i++) {
+      vouts.push(TxOut.parse(stream));
+    }
+
+    // witness data
+    for (const vin of vins) {
+      // get the count of items
+      const numItems = decodeVarint(stream);
+
+      // read the items
+      const items: ScriptCmd[] = [];
+      for (let i = 0n; i < numItems; i++) {
+        // get the item length
+        const itemLen = decodeVarint(stream);
+        if (itemLen === 0n) {
+          items.push(OpCode.OP_0);
+        } else {
+          items.push(stream.read(Number(itemLen)));
+        }
+      }
+
+      // add witness items to input
+      vin.witness = items;
+    }
+
+    // locktime
+    const locktime = bigFromBufLE(stream.read(4));
+
+    return new Tx(version, vins, vouts, locktime, true, testnet);
+  }
+
+  public static parseLegacy(stream: Readable, testnet: boolean = false): Tx {
     // get the version
     const version = bigFromBufLE(stream.read(4));
 
@@ -41,7 +109,7 @@ export class Tx {
     // locktime
     const locktime = bigFromBufLE(stream.read(4));
 
-    return new Tx(version, ins, outs, locktime, testnet);
+    return new Tx(version, ins, outs, locktime, false, testnet);
   }
 
   constructor(
@@ -49,12 +117,14 @@ export class Tx {
     txIns: TxIn[] = [],
     txOuts: TxOut[] = [],
     locktime: bigint = 0n,
+    segwit: boolean = false,
     testnet: boolean = false
   ) {
     this.version = version;
     this.txIns = txIns;
     this.txOuts = txOuts;
     this.locktime = locktime;
+    this.segwit = segwit;
     this.testnet = testnet;
   }
 
