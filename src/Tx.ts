@@ -14,6 +14,7 @@ import { Script } from "./script/Script";
 import { PrivateKey } from "./ecc/PrivateKey";
 import { ScriptCmd } from "./script/ScriptCmd";
 import { OpCode } from "./script/OpCode";
+import { bitArrayToBuf } from "./util/BitArrayUtil";
 
 export class Tx {
   public version: bigint;
@@ -158,6 +159,14 @@ export class Tx {
    * Returns the byte serialization the transaction
    */
   public serialize(): Buffer {
+    if (this.segwit) {
+      return this.serializeSegwit();
+    } else {
+      return this.serializeLegacy();
+    }
+  }
+
+  public serializeLegacy(): Buffer {
     return combine(
       bigToBufLE(this.version, 4),
       encodeVarint(BigInt(this.txIns.length)),
@@ -166,6 +175,39 @@ export class Tx {
       ...this.txOuts.map(p => p.serialize()),
       bigToBufLE(this.locktime, 4)
     );
+  }
+
+  public serializeSegwit(): Buffer {
+    return combine(
+      bigToBufLE(this.version, 4),
+      Buffer.from([0x00, 0x01]),
+      encodeVarint(BigInt(this.txIns.length)),
+      ...this.txIns.map(p => p.serialize()),
+      encodeVarint(BigInt(this.txOuts.length)),
+      ...this.txOuts.map(p => p.serialize()),
+      this.serializeWitness(),
+      bigToBufLE(this.locktime, 4)
+    );
+  }
+
+  public serializeWitness(): Buffer {
+    const bufs = [];
+    // for each input
+    for (const vin of this.txIns) {
+      // number of items in input
+      bufs.push(encodeVarint(vin.witness.length));
+      // foreach item, encode item_len and item_data
+      for (const item of vin.witness) {
+        if (Buffer.isBuffer(item)) {
+          bufs.push(encodeVarint(item.length));
+          bufs.push(item);
+        } else {
+          bufs.push(encodeVarint(1));
+          bufs.push(encodeVarint(item as number));
+        }
+      }
+    }
+    return combine(...bufs);
   }
 
   /**

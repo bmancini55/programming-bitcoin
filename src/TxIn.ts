@@ -5,6 +5,7 @@ import { TxFetcher } from "./TxFetcher";
 import { Tx } from "./Tx";
 import { Script } from "./script/Script";
 import { ScriptCmd } from "./script/ScriptCmd";
+import { encodeVarint } from "./util/Varint";
 
 export class TxIn {
   public prevTx: string;
@@ -18,7 +19,7 @@ export class TxIn {
    * @param stream
    */
   public static parse(stream: Readable): TxIn {
-    const prevTx = stream.read(32).reverse(); // convert to little-endian
+    const prevTx = Buffer.from(stream.read(32)).reverse(); // convert to big-endian
     const prevIndex = bigFromBufLE(stream.read(4));
     const scriptSig = Script.parse(stream);
     const sequence = bigFromBufLE(stream.read(4));
