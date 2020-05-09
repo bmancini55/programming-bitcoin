@@ -15,6 +15,7 @@ import { PrivateKey } from "./ecc/PrivateKey";
 import { ScriptCmd } from "./script/ScriptCmd";
 import { OpCode } from "./script/OpCode";
 import { bitArrayToBuf } from "./util/BitArrayUtil";
+import { p2pkhScript } from "./script/ScriptFactories";
 
 export class Tx {
   public version: bigint;
@@ -23,6 +24,10 @@ export class Tx {
   public locktime: bigint;
   public testnet: boolean;
   public segwit: boolean;
+
+  private _hashPrevouts: Buffer;
+  private _hashSequence: Buffer;
+  private _hashOutputs: Buffer;
 
   /**
    * Parses either a legacy or segwit transaction by detecting the segwit marker
@@ -280,7 +285,10 @@ export class Tx {
    * 4. return hash256
    * @param input
    */
-  public async sigHash(input: number, redeemScript?: Script): Promise<Buffer> {
+  public async sigHashLegacy(
+    input: number,
+    redeemScript?: Script
+  ): Promise<Buffer> {
     // serialize version
     const version = bigToBufLE(this.version, 4);
 
@@ -331,6 +339,115 @@ export class Tx {
   }
 
   /**
+   * Generates the signing hash for a segwit transaction according to rules
+   * specified in BIP0143.
+   * @param input
+   */
+  public async sigHashSegwit(
+    input: number,
+    redeemScript?: Script,
+    witnessScript?: Script,
+    amount?: bigint
+  ): Promise<Buffer> {
+    const vin = this.txIns[input];
+    const version = bigToBufLE(this.version, 4);
+    const hashPrevouts = this.hashPrevouts();
+    const hashSequence = this.hashSequence();
+
+    const prevOut = Buffer.from(vin.prevTx, "hex").reverse();
+    const prevIndex = bigToBufLE(vin.prevIndex, 4);
+
+    let scriptCode: Buffer;
+
+    // p2wpkh
+    if (witnessScript) {
+      scriptCode = witnessScript.serialize();
+    } else if (redeemScript) {
+      scriptCode = p2pkhScript(redeemScript.cmds[1] as Buffer).serialize();
+    } else {
+      const prevScriptPubKey = await vin.scriptPubKey(this.testnet);
+      scriptCode = p2pkhScript(prevScriptPubKey.cmds[1] as Buffer).serialize();
+    }
+
+    const value = bigToBufLE(amount || (await vin.value()), 8);
+    const sequence = bigToBufLE(vin.sequence, 4);
+    const hashOutputs = this.hashOutputs();
+    const locktime = bigToBufLE(this.locktime, 4);
+    const sigHashType = bigToBufLE(1n, 4);
+
+    const preimage = combine(
+      version,
+      hashPrevouts,
+      hashSequence,
+      prevOut,
+      prevIndex,
+      scriptCode,
+      value,
+      sequence,
+      hashOutputs,
+      locktime,
+      sigHashType
+    );
+    return hash256(preimage);
+  }
+
+  /**
+   * Combines the previous outputs for all inputs in the transaction by
+   * serializing them as:
+   *    prevTx: 32-bytes IBO
+   *    prevIdx: 4-byte LE
+   * The combined byte array is hash256.
+   *
+   * This operation is only performed once and the value is cached to elliminate
+   * the quadratic hashing problem.
+   */
+  public hashPrevouts() {
+    if (this._hashPrevouts) return this._hashPrevouts;
+    const buffers = [];
+    for (const vin of this.txIns) {
+      buffers.push(Buffer.from(vin.prevTx, "hex").reverse());
+      buffers.push(bigToBufLE(vin.prevIndex, 4));
+    }
+    this._hashPrevouts = hash256(combine(...buffers));
+    return this._hashPrevouts;
+  }
+
+  /**
+   * Combines the sequences for each input in the transaction and hashes the
+   * combined byte array using hash256. This is defined in BIP143.
+   *
+   * This operation is only performed once and the value is cached to elliminate
+   * the quadratic hashing problem.
+   */
+  public hashSequence() {
+    if (this._hashSequence) return this._hashSequence;
+    const buffers = [];
+    for (const vin of this.txIns) {
+      buffers.push(bigToBufLE(vin.sequence, 4));
+    }
+    this._hashSequence = hash256(combine(...buffers));
+    return this._hashSequence;
+  }
+
+  /**
+   * Hashes the ouputs for the transaction according to BIP143 by concatenating
+   * the serialization of all of the outputs into a single byte array and then
+   * performing a hash256 on the complete byte stream.
+   *
+   * This operation is only performed once and the value is cached to elliminate
+   * the quadratic hashing problem.
+   */
+  public hashOutputs() {
+    if (this._hashOutputs) return this._hashOutputs;
+    const buffers = [];
+    for (const vout of this.txOuts) {
+      buffers.push(vout.serialize());
+    }
+    this._hashOutputs = hash256(combine(...buffers));
+    return this._hashOutputs;
+  }
+
+  /**
    * Verifies a single input by checking that the script correctly evaluates.
    * This method creates a sig_hash for the input, combines the scriptSig +
    * scriptPubKey for the input and evaluates the combined script.
@@ -338,23 +455,64 @@ export class Tx {
    * For P2SH inputs, it will check if the scriptPubKey is P2SH and will pluck
    * the redeemScript from the end of the scriptSig commands, parse the redeemScript
    * and provide it to the hash function.
+   *
+   * For segwit
    * @param i
    * @param testnet
    */
   public async verifyInput(i: number): Promise<boolean> {
-    const txin = this.txIns[i];
-    const pubKey = await txin.scriptPubKey(this.testnet);
-    let redeemScript: Script;
+    const vin = this.txIns[i];
+    const pubKey = await vin.scriptPubKey(this.testnet);
+    let z: Buffer;
+    let witness: ScriptCmd[];
 
+    // p2sh / p2nwpk / p2nwsh
     if (pubKey.isP2shScriptPubKey()) {
-      const bytes = txin.scriptSig.cmds.slice(-1)[0] as Buffer;
-      const buffer = combine(encodeVarint(BigInt(bytes.length)), bytes);
-      const stream = bufToStream(buffer);
-      redeemScript = Script.parse(stream);
+      // extract the redeem script from the last command in ScriptSig
+      const redeemBytes = vin.scriptSig.cmds[
+        vin.scriptSig.cmds.length - 1
+      ] as Buffer;
+
+      // construct a valid Script by combining the length and script bytes
+      // and using Script.parse
+      const redeemScript = Script.parse(
+        bufToStream(
+          combine(
+            encodeVarint(redeemBytes.length), // length of bytes
+            redeemBytes // redeem script bytes
+          )
+        )
+      );
+
+      // p2nwpkh
+      if (redeemScript.isP2wpkhScriptPubKey()) {
+        z = await this.sigHashSegwit(i, redeemScript);
+        witness = vin.witness;
+      }
+
+      // p2sh
+      else {
+        z = await this.sigHashLegacy(i, redeemScript);
+        witness = undefined;
+      }
     }
 
-    const z = await this.sigHash(i, redeemScript);
-    const combined = txin.scriptSig.add(pubKey);
+    // p2wpkh
+    else if (pubKey.isP2wpkhScriptPubKey()) {
+      z = await this.sigHashSegwit(i);
+      witness = vin.witness;
+    }
+
+    // p2pkh, p2pk, others...
+    else {
+      z = await this.sigHashLegacy(i);
+      witness = undefined;
+    }
+
+    // combine scriptsig + scriptpubkey
+    const combined = vin.scriptSig.add(pubKey);
+
+    // evaluate combined script
     return combined.evaluate(z);
   }
 
@@ -389,7 +547,7 @@ export class Tx {
    */
   public async signInput(i: number, pk: PrivateKey): Promise<boolean> {
     const txin = this.txIns[i];
-    const z = await this.sigHash(i);
+    const z = await this.sigHashLegacy(i);
     const sig = pk.sign(bigFromBuf(z));
     const der = combine(sig.der(), bigToBuf(1n));
     const sec = pk.point.sec(true);

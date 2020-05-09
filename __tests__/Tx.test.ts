@@ -8,6 +8,12 @@ import { PrivateKey } from "../src/ecc/PrivateKey";
 import { decodeAddress } from "../src/util/Address";
 import { Script } from "../src/script/Script";
 import { bufToStream } from "../src/util/BufferUtil";
+import { bigFromBufLE } from "../src/util/BigIntUtil";
+
+const p2wpkhBuf = Buffer.from(
+  "0100000002fff7f7881a8099afa6940d42d1e7f6362bec38171ea3edf433541db4e4ad969f0000000000eeffffffef51e1b804cc89d182d279655c3aa89e815b1b309fe287d9b2b55d57b90ec68a0100000000ffffffff02202cb206000000001976a9148280b37df378db99f66f85c95a783a76ac7a6d5988ac9093510d000000001976a9143bde42dbee7e4dbe6a21b2d50ce2f0167faa815988ac11000000",
+  "hex"
+);
 
 describe("Tx", () => {
   describe(".parse()", () => {
@@ -107,18 +113,18 @@ describe("Tx", () => {
     }).timeout(10000);
   });
 
-  describe(".sigHash()", () => {
-    it("should generate the sigHash for p2pkh", async () => {
+  describe(".sigHashLegacy()", () => {
+    it("p2pkh", async () => {
       const raw = "0100000001813f79011acb80925dfe69b3def355fe914bd1d96a3f5f71bf8303c6a989c7d1000000001976a914a802fc56c704ce87c42d7c92eb75e7896bdc41ae88acfeffffff02a135ef01000000001976a914bc3b654dca7e56b04dca18f2566cdaf02e8d9ada88ac99c39800000000001976a9141c4bc762dd5423e332166702cb75f40df79fea1288ac1943060001000000"; // prettier-ignore
       const stream = new TestStream(Buffer.from(raw, "hex"));
       const tx = await Tx.parse(stream);
-      const hash = await tx.sigHash(0);
+      const hash = await tx.sigHashLegacy(0);
       expect(hash.toString("hex")).to.equal(
         "27e0c5994dec7824e56dec6b2fcb342eb7cdb0d0957c2fce9882f715e85d81a6"
       );
     });
 
-    it("should generate the sigHash for p2sh", async () => {
+    it("p2sh", async () => {
       const rawTx =
         "0100000001868278ed6ddfb6c1ed3ad5f8181eb0c7a385aa0836f01d5e4789e6\
 bd304d87221a000000db00483045022100dc92655fe37036f47756db8102e0d7d5e28b3beb83a8\
@@ -132,7 +138,7 @@ d3b11400000000001976a914904a49878c0adfc3aa05de7afad2cc15f483a56a88ac7f40090000\
 a914ba35042cfe9fc66fd35ac2224eebdafd1028ad2788acdc4ace020000000017a91474d691da\
 1574e6b3c192ecfb52cc8984ee7b6c568700000000";
       const txStream = new TestStream(Buffer.from(rawTx, "hex"));
-      const tx = await Tx.parse(txStream);
+      const tx = Tx.parse(txStream);
 
       const rawRedeemScript =
         "475221022626e955ea6ea6d98850c994f9107b036b1334f18ca88\
@@ -141,25 +147,73 @@ bdbd4bb7152ae";
       const redeemScriptStream = new TestStream(
         Buffer.from(rawRedeemScript, "hex")
       );
-      const redeemScript = await Script.parse(redeemScriptStream);
+      const redeemScript = Script.parse(redeemScriptStream);
 
-      const hash = await tx.sigHash(0, redeemScript);
+      const hash = await tx.sigHashLegacy(0, redeemScript);
       expect(hash.toString("hex")).to.equal(
         "e71bfa115715d6fd33796948126f40a8cdd39f187e4afb03896795189fe1423c"
       );
     });
   });
 
+  describe(".hashPrevouts()", () => {
+    it("p2wkh", () => {
+      const tx = Tx.parse(bufToStream(p2wpkhBuf));
+      const result = tx.hashPrevouts();
+      expect(result.toString("hex")).to.equal(
+        "96b827c8483d4e9b96712b6713a7b68d6e8003a781feba36c31143470b4efd37"
+      );
+    });
+  });
+
+  describe(".hashSequence()", () => {
+    it("p2wpkh", () => {
+      const tx = Tx.parse(bufToStream(p2wpkhBuf));
+      const result = tx.hashSequence();
+      expect(result.toString("hex")).to.equal(
+        "52b0a642eea2fb7ae638c36f6252b6750293dbe574a806984b8e4d8548339a3b"
+      );
+    });
+  });
+
+  describe(".hashOutputs()", () => {
+    it("p2wpkh", () => {
+      const tx = Tx.parse(bufToStream(p2wpkhBuf));
+      const result = tx.hashOutputs();
+      expect(result.toString("hex")).to.equal(
+        "863ef3e1a92afbfdb97f31ad0fc7683ee943e9abcf2501590ff8f6551f47e5e5"
+      );
+    });
+  });
+
+  describe(".sigHashSegwit()", () => {
+    it("p2wpkh", async () => {
+      const tx = Tx.parse(bufToStream(p2wpkhBuf));
+      const witness = Script.parse(
+        bufToStream(
+          Buffer.from(
+            "1976a9141d0f172a0ecb48aee1be1f2687d2963ae33f71a188ac",
+            "hex"
+          )
+        )
+      );
+      const result = await tx.sigHashSegwit(1, undefined, witness, 600000000n);
+      expect(result.toString("hex")).to.equal(
+        "c37af31116d1b27caf68aae9e3ac82f1477929014d5b917657d0eb49478cb670"
+      );
+    });
+  });
+
   describe(".verifyInput", () => {
-    it("should verify a p2pkh input", async () => {
+    it("p2pkh input", async () => {
       const raw = "0100000001813f79011acb80925dfe69b3def355fe914bd1d96a3f5f71bf8303c6a989c7d1000000006b483045022100ed81ff192e75a3fd2304004dcadb746fa5e24c5031ccfcf21320b0277457c98f02207a986d955c6e0cb35d446a89d3f56100f4d7f67801c31967743a9c8e10615bed01210349fc4e631e3624a545de3f89f5d8684c7b8138bd94bdd531d2e213bf016b278afeffffff02a135ef01000000001976a914bc3b654dca7e56b04dca18f2566cdaf02e8d9ada88ac99c39800000000001976a9141c4bc762dd5423e332166702cb75f40df79fea1288ac19430600"; // prettier-ignore
       const stream = new TestStream(Buffer.from(raw, "hex"));
-      const tx = await Tx.parse(stream);
+      const tx = Tx.parse(stream);
       const result = await tx.verifyInput(0);
       expect(result).to.equal(true);
     });
 
-    it("should verify a p2sh input", async () => {
+    it("p2sh input", async () => {
       const rawTx =
         "0100000001868278ed6ddfb6c1ed3ad5f8181eb0c7a385aa0836f01d5e4789e6\
 bd304d87221a000000db00483045022100dc92655fe37036f47756db8102e0d7d5e28b3beb83a8\
@@ -179,7 +233,7 @@ a914ba35042cfe9fc66fd35ac2224eebdafd1028ad2788acdc4ace020000000017a91474d691da\
   });
 
   describe(".verify", () => {
-    it("should verify a p2pkh tx", async () => {
+    it("p2pkh tx", async () => {
       const raw = "0100000001813f79011acb80925dfe69b3def355fe914bd1d96a3f5f71bf8303c6a989c7d1000000006b483045022100ed81ff192e75a3fd2304004dcadb746fa5e24c5031ccfcf21320b0277457c98f02207a986d955c6e0cb35d446a89d3f56100f4d7f67801c31967743a9c8e10615bed01210349fc4e631e3624a545de3f89f5d8684c7b8138bd94bdd531d2e213bf016b278afeffffff02a135ef01000000001976a914bc3b654dca7e56b04dca18f2566cdaf02e8d9ada88ac99c39800000000001976a9141c4bc762dd5423e332166702cb75f40df79fea1288ac19430600"; // prettier-ignore
       const stream = new TestStream(Buffer.from(raw, "hex"));
       const tx = await Tx.parse(stream);
@@ -187,7 +241,7 @@ a914ba35042cfe9fc66fd35ac2224eebdafd1028ad2788acdc4ace020000000017a91474d691da\
       expect(result).to.equal(true);
     });
 
-    it("should verify a p2sh tx", async () => {
+    it("p2sh tx", async () => {
       const rawTx =
         "0100000001868278ed6ddfb6c1ed3ad5f8181eb0c7a385aa0836f01d5e4789e6\
 bd304d87221a000000db00483045022100dc92655fe37036f47756db8102e0d7d5e28b3beb83a8\
