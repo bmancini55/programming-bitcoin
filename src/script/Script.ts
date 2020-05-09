@@ -350,4 +350,19 @@ export class Script {
       this.cmds[4] === OpCode.OP_CHECKSIG
     );
   }
+
+  /**
+   * Returns true if the ScriptPubKey matches the pattern for a P2WPKH script
+   * which has 2 elements:
+   *
+   * OP_0
+   * OP_PUSHBYTES_20 <h160>
+   */
+  public isP2wpkhScriptPubKey(): boolean {
+    return (
+      this.cmds.length === 2 &&
+      this.cmds[0] === OpCode.OP_0 &&
+      (this.cmds[1] as Buffer).length === 20
+    );
+  }
 }

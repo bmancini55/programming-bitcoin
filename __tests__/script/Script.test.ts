@@ -10,6 +10,7 @@ import {
   p2pkhSig,
   p2msSig,
   p2shSig,
+  p2wpkhScript,
 } from "../../src/script/ScriptFactories";
 import { combine, combineLE } from "../../src/util/BufferUtil";
 import { bigFromBuf } from "../../src/util/BigIntUtil";
@@ -167,6 +168,20 @@ describe("Script", () => {
       const p1 = new PrivateKey(1n);
       const script = p2pkhScript(p1.point.hash160());
       expect(script.isP2pkhScriptPubKey()).to.equal(true);
+    });
+  });
+
+  describe(".isP2wpkhScriptPubKey", () => {
+    it("false when not p2wpkh script pub key", () => {
+      const p1 = new PrivateKey(1n);
+      const script = p2pkhScript(p1.point.hash160());
+      expect(script.isP2wpkhScriptPubKey()).to.equal(false);
+    });
+
+    it("true when p2wpkh script pub key", () => {
+      const p1 = new PrivateKey(1n);
+      const script = p2wpkhScript(p1.point.hash160());
+      expect(script.isP2wpkhScriptPubKey()).to.equal(true);
     });
   });
 

@@ -4,6 +4,7 @@ import {
   p2pkhScript,
   p2msScript,
   p2shScript,
+  p2wpkhScript,
 } from "../../src/script/ScriptFactories";
 import { bigFromBuf } from "../../src/util/BigIntUtil";
 import { Script } from "../../src/script/Script";
@@ -50,6 +51,16 @@ describe("ScriptFactories", () => {
       const script = p2shScript(h160);
       expect(script.serialize().toString("hex")).to.equal(
         "17a914cebaa98c19807134434d107b0d3e5692a516ea6687"
+      );
+    });
+  });
+
+  describe(".p2wshScript()", () => {
+    it("serialzies", () => {
+      const h160 = hash160(Buffer.from("test"));
+      const script = p2wpkhScript(h160);
+      expect(script.serialize().toString("hex")).to.equal(
+        "160014cebaa98c19807134434d107b0d3e5692a516ea66"
       );
     });
   });

@@ -170,3 +170,19 @@ export function p2shSig(redeemScript: Script, ...cmds: ScriptCmd[]): Script {
     redeemScript.serialize(),
   ]); // prettier-ignore
 }
+
+/**
+ * Creats a p2wpkh ScriptPubKey
+ *
+ * @remakrs
+ * OP_0
+ * OP_PUSHBYTES_20 <h160>
+ *
+ * @param h160
+ */
+export function p2wpkhScript(h160: Buffer): Script {
+  return new Script([
+    OpCode.OP_0,
+    h160
+  ]); // prettier-ignore
+}
