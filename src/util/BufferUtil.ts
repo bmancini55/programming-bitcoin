@@ -91,3 +91,11 @@ export function writeBytesReverse(
     offset += 1;
   }
 }
+
+/**
+ * Creates a stream from a hex string
+ * @param hex
+ */
+export function streamFromHex(hex: string) {
+  return bufToStream(Buffer.from(hex, "hex"));
+}

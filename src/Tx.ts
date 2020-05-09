@@ -14,7 +14,6 @@ import { Script } from "./script/Script";
 import { PrivateKey } from "./ecc/PrivateKey";
 import { ScriptCmd } from "./script/ScriptCmd";
 import { OpCode } from "./script/OpCode";
-import { bitArrayToBuf } from "./util/BitArrayUtil";
 import { p2pkhScript } from "./script/ScriptFactories";
 
 export class Tx {
@@ -362,7 +361,9 @@ export class Tx {
     // p2wpkh
     if (witnessScript) {
       scriptCode = witnessScript.serialize();
-    } else if (redeemScript) {
+    }
+    // p2sh-p2wpkh
+    else if (redeemScript) {
       scriptCode = p2pkhScript(redeemScript.cmds[1] as Buffer).serialize();
     } else {
       const prevScriptPubKey = await vin.scriptPubKey(this.testnet);
@@ -388,6 +389,7 @@ export class Tx {
       locktime,
       sigHashType
     );
+
     return hash256(preimage);
   }
 

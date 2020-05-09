@@ -7,11 +7,16 @@ import { p2pkhScript } from "../src/script/ScriptFactories";
 import { PrivateKey } from "../src/ecc/PrivateKey";
 import { decodeAddress } from "../src/util/Address";
 import { Script } from "../src/script/Script";
-import { bufToStream } from "../src/util/BufferUtil";
+import { bufToStream, streamFromHex } from "../src/util/BufferUtil";
 import { bigFromBufLE } from "../src/util/BigIntUtil";
 
 const p2wpkhBuf = Buffer.from(
   "0100000002fff7f7881a8099afa6940d42d1e7f6362bec38171ea3edf433541db4e4ad969f0000000000eeffffffef51e1b804cc89d182d279655c3aa89e815b1b309fe287d9b2b55d57b90ec68a0100000000ffffffff02202cb206000000001976a9148280b37df378db99f66f85c95a783a76ac7a6d5988ac9093510d000000001976a9143bde42dbee7e4dbe6a21b2d50ce2f0167faa815988ac11000000",
+  "hex"
+);
+
+const p2sh_p2wpkh = Buffer.from(
+  "0100000001db6b1b20aa0fd7b23880be2ecbd4a98130974cf4748fb66092ac4d3ceb1a54770100000000feffffff02b8b4eb0b000000001976a914a457b684d7f0d539a46a45bbc043f35b59d0d96388ac0008af2f000000001976a914fd270b1ee6abcaea97fea7ad0402e8bd8ad6d77c88ac92040000",
   "hex"
 );
 
@@ -164,6 +169,14 @@ bdbd4bb7152ae";
         "96b827c8483d4e9b96712b6713a7b68d6e8003a781feba36c31143470b4efd37"
       );
     });
+
+    it("p2sh-p2wpkh", () => {
+      const tx = Tx.parse(bufToStream(p2sh_p2wpkh));
+      const result = tx.hashPrevouts();
+      expect(result.toString("hex")).to.equal(
+        "b0287b4a252ac05af83d2dcef00ba313af78a3e9c329afa216eb3aa2a7b4613a"
+      );
+    });
   });
 
   describe(".hashSequence()", () => {
@@ -172,6 +185,14 @@ bdbd4bb7152ae";
       const result = tx.hashSequence();
       expect(result.toString("hex")).to.equal(
         "52b0a642eea2fb7ae638c36f6252b6750293dbe574a806984b8e4d8548339a3b"
+      );
+    });
+
+    it("p2sh-p2wpkh", () => {
+      const tx = Tx.parse(bufToStream(p2sh_p2wpkh));
+      const result = tx.hashSequence();
+      expect(result.toString("hex")).to.equal(
+        "18606b350cd8bf565266bc352f0caddcf01e8fa789dd8a15386327cf8cabe198"
       );
     });
   });
@@ -184,22 +205,41 @@ bdbd4bb7152ae";
         "863ef3e1a92afbfdb97f31ad0fc7683ee943e9abcf2501590ff8f6551f47e5e5"
       );
     });
+
+    it("p2sh-p2wpkh", () => {
+      const tx = Tx.parse(bufToStream(p2sh_p2wpkh));
+      const result = tx.hashOutputs();
+      expect(result.toString("hex")).to.equal(
+        "de984f44532e2173ca0d64314fcefe6d30da6f8cf27bafa706da61df8a226c83"
+      );
+    });
   });
 
   describe(".sigHashSegwit()", () => {
     it("p2wpkh", async () => {
       const tx = Tx.parse(bufToStream(p2wpkhBuf));
       const witness = Script.parse(
-        bufToStream(
-          Buffer.from(
-            "1976a9141d0f172a0ecb48aee1be1f2687d2963ae33f71a188ac",
-            "hex"
-          )
-        )
+        streamFromHex("1976a9141d0f172a0ecb48aee1be1f2687d2963ae33f71a188ac")
       );
       const result = await tx.sigHashSegwit(1, undefined, witness, 600000000n);
       expect(result.toString("hex")).to.equal(
         "c37af31116d1b27caf68aae9e3ac82f1477929014d5b917657d0eb49478cb670"
+      );
+    });
+
+    it("p2sh-p2wpkh", async () => {
+      const tx = Tx.parse(bufToStream(p2sh_p2wpkh));
+      const redeemScript = Script.parse(
+        streamFromHex("16001479091972186c449eb1ded22b78e40d009bdf0089")
+      );
+      const result = await tx.sigHashSegwit(
+        0,
+        redeemScript,
+        undefined,
+        1000000000n
+      );
+      expect(result.toString("hex")).to.equal(
+        "64f3b0f4dd2bb3aa1ce8566d220cc74dda9df97d8490cc81d89d735c92e59fb6"
       );
     });
   });
