@@ -24,6 +24,11 @@ export class Tx {
   public testnet: boolean;
   public segwit: boolean;
 
+  /**
+   * Parses either a legacy or segwit transaction by detecting the segwit marker
+   * @param stream
+   * @param testnet
+   */
   public static parse(stream: Readable, testnet: boolean = false): Tx {
     // read the first 5 bytes, 4-version, 1-flag???
     const bytes = stream.read(5);
@@ -38,6 +43,50 @@ export class Tx {
     }
   }
 
+  /**
+   * Parses a legacy transaction which includes:
+   *
+   * version - 4 bytes LE,
+   * num vin - varint
+   * vins
+   * num vout - varint
+   * vouts
+   * locktime - 4 byte LE
+   * @param stream
+   * @param testnet
+   */
+  private static parseLegacy(stream: Readable, testnet: boolean = false): Tx {
+    // get the version
+    const version = bigFromBufLE(stream.read(4));
+
+    // obtain the inputs
+    const inLen = decodeVarint(stream);
+    const ins = [];
+    for (let i = 0n; i < inLen; i++) {
+      ins.push(TxIn.parse(stream));
+    }
+
+    // obtain the outputs
+    const outLen = decodeVarint(stream);
+    const outs = [];
+    for (let i = 0n; i < outLen; i++) {
+      outs.push(TxOut.parse(stream));
+    }
+
+    // locktime
+    const locktime = bigFromBufLE(stream.read(4));
+
+    return new Tx(version, ins, outs, locktime, false, testnet);
+  }
+
+  /**
+   * Parses a segwit transaction. Segwit transactions differ from legacy
+   * transactions by having a two-byte marker and segwit version 0x0001 as the
+   * 5th and 6th bytes. They also include witness data after vout and before
+   * the locktime.
+   * @param stream
+   * @param testnet
+   */
   public static parseSegwit(stream: Readable, testnet: boolean = false): Tx {
     // get the version
     const version = bigFromBufLE(stream.read(4));
@@ -89,30 +138,6 @@ export class Tx {
     return new Tx(version, vins, vouts, locktime, true, testnet);
   }
 
-  public static parseLegacy(stream: Readable, testnet: boolean = false): Tx {
-    // get the version
-    const version = bigFromBufLE(stream.read(4));
-
-    // obtain the inputs
-    const inLen = decodeVarint(stream);
-    const ins = [];
-    for (let i = 0n; i < inLen; i++) {
-      ins.push(TxIn.parse(stream));
-    }
-
-    // obtain the outputs
-    const outLen = decodeVarint(stream);
-    const outs = [];
-    for (let i = 0n; i < outLen; i++) {
-      outs.push(TxOut.parse(stream));
-    }
-
-    // locktime
-    const locktime = bigFromBufLE(stream.read(4));
-
-    return new Tx(version, ins, outs, locktime, false, testnet);
-  }
-
   constructor(
     version: bigint = 1n,
     txIns: TxIn[] = [],
@@ -137,6 +162,7 @@ export class Tx {
       `ins: ${ins}`,
       `outs: ${outs}`,
       `locktime: ${this.locktime}`,
+      `segwit: ${this.segwit}`,
       `testnet: ${this.testnet}`,
     ].join("\n");
   }
@@ -149,14 +175,16 @@ export class Tx {
   }
 
   /**
-   * Returns the hash256 of the transaction serialization in RPC hash byte order
+   * Returns the hash256 of the transaction serialization in reversed byte order
+   * using the legacy serialization (to maintain backwards compaitbility)
    */
   public hash(): Buffer {
-    return hash256(this.serialize()).reverse();
+    return hash256(this.serializeLegacy()).reverse();
   }
 
   /**
-   * Returns the byte serialization the transaction
+   * Returns the byte serialization of the transaction for either legacy or
+   * segwit transactions.
    */
   public serialize(): Buffer {
     if (this.segwit) {
@@ -166,6 +194,9 @@ export class Tx {
     }
   }
 
+  /**
+   * Performs the legacy serialization of the transaction
+   */
   public serializeLegacy(): Buffer {
     return combine(
       bigToBufLE(this.version, 4),
@@ -177,19 +208,32 @@ export class Tx {
     );
   }
 
+  /**
+   * Performs the segwit serialization of the transaction
+   */
   public serializeSegwit(): Buffer {
     return combine(
       bigToBufLE(this.version, 4),
-      Buffer.from([0x00, 0x01]),
+      Buffer.from([0x00, 0x01]), // segwit marker and version
       encodeVarint(BigInt(this.txIns.length)),
       ...this.txIns.map(p => p.serialize()),
       encodeVarint(BigInt(this.txOuts.length)),
       ...this.txOuts.map(p => p.serialize()),
-      this.serializeWitness(),
+      this.serializeWitness(), // witness information
       bigToBufLE(this.locktime, 4)
     );
   }
 
+  /**
+   * Serializes the witness data for each input in the format:
+   *
+   * for each input:
+   * num_items: varint
+   *
+   * for each item:
+   * item_len: varint
+   * item: item_len
+   */
   public serializeWitness(): Buffer {
     const bufs = [];
     // for each input
