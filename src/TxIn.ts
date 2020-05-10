@@ -14,6 +14,9 @@ export class TxIn {
   public sequence: bigint;
   public witness: ScriptCmd[];
 
+  public prevTxValue: bigint;
+  public prevTxScriptPubKey: Script;
+
   /**
    * Parses a TxIn from a stream
    * @param stream
@@ -68,8 +71,11 @@ export class TxIn {
    * @param testnet
    */
   public async value(testnet: boolean = false): Promise<bigint> {
+    if (this.prevTxValue) return this.prevTxValue;
     const tx = await this.fetchTx(testnet);
-    return tx.txOuts[Number(this.prevIndex)].amount;
+    this.prevTxValue = tx.txOuts[Number(this.prevIndex)].amount;
+    this.prevTxScriptPubKey = tx.txOuts[Number(this.prevIndex)].scriptPubKey;
+    return this.prevTxValue;
   }
 
   /**
@@ -78,7 +84,10 @@ export class TxIn {
    * @param testnet
    */
   public async scriptPubKey(testnet: boolean = false): Promise<Script> {
+    if (this.prevTxScriptPubKey) return this.prevTxScriptPubKey;
     const tx = await this.fetchTx(testnet);
-    return tx.txOuts[Number(this.prevIndex)].scriptPubKey;
+    this.prevTxValue = tx.txOuts[Number(this.prevIndex)].amount;
+    this.prevTxScriptPubKey = tx.txOuts[Number(this.prevIndex)].scriptPubKey;
+    return this.prevTxScriptPubKey;
   }
 }

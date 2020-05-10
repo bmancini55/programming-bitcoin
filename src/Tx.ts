@@ -345,8 +345,7 @@ export class Tx {
   public async sigHashSegwit(
     input: number,
     redeemScript?: Script,
-    witnessScript?: Script,
-    amount?: bigint
+    witnessScript?: Script
   ): Promise<Buffer> {
     const vin = this.txIns[input];
     const version = bigToBufLE(this.version, 4);
@@ -370,7 +369,7 @@ export class Tx {
       scriptCode = p2pkhScript(prevScriptPubKey.cmds[1] as Buffer).serialize();
     }
 
-    const value = bigToBufLE(amount || (await vin.value()), 8);
+    const value = bigToBufLE(await vin.value(), 8);
     const sequence = bigToBufLE(vin.sequence, 4);
     const hashOutputs = this.hashOutputs();
     const locktime = bigToBufLE(this.locktime, 4);
@@ -515,7 +514,7 @@ export class Tx {
     const combined = vin.scriptSig.add(pubKey);
 
     // evaluate combined script
-    return combined.evaluate(z);
+    return combined.evaluate(z, witness);
   }
 
   /**

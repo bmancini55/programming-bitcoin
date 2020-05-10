@@ -3,20 +3,27 @@ import { TestStream } from "./TestStream";
 import { Tx } from "../src/Tx";
 import { TxIn } from "../src/TxIn";
 import { TxOut } from "../src/TxOut";
-import { p2pkhScript } from "../src/script/ScriptFactories";
+import {
+  p2pkhScript,
+  p2wpkhScript,
+  p2shScript,
+} from "../src/script/ScriptFactories";
 import { PrivateKey } from "../src/ecc/PrivateKey";
 import { decodeAddress } from "../src/util/Address";
 import { Script } from "../src/script/Script";
 import { bufToStream, streamFromHex } from "../src/util/BufferUtil";
 import { bigFromBufLE } from "../src/util/BigIntUtil";
+import { hash160 } from "../src/util/Hash160";
 
+// https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki#native-p2wpkh
 const p2wpkhBuf = Buffer.from(
-  "0100000002fff7f7881a8099afa6940d42d1e7f6362bec38171ea3edf433541db4e4ad969f0000000000eeffffffef51e1b804cc89d182d279655c3aa89e815b1b309fe287d9b2b55d57b90ec68a0100000000ffffffff02202cb206000000001976a9148280b37df378db99f66f85c95a783a76ac7a6d5988ac9093510d000000001976a9143bde42dbee7e4dbe6a21b2d50ce2f0167faa815988ac11000000",
+  "01000000000102fff7f7881a8099afa6940d42d1e7f6362bec38171ea3edf433541db4e4ad969f00000000494830450221008b9d1dc26ba6a9cb62127b02742fa9d754cd3bebf337f7a55d114c8e5cdd30be022040529b194ba3f9281a99f2b1c0a19c0489bc22ede944ccf4ecbab4cc618ef3ed01eeffffffef51e1b804cc89d182d279655c3aa89e815b1b309fe287d9b2b55d57b90ec68a0100000000ffffffff02202cb206000000001976a9148280b37df378db99f66f85c95a783a76ac7a6d5988ac9093510d000000001976a9143bde42dbee7e4dbe6a21b2d50ce2f0167faa815988ac000247304402203609e17b84f6a7d30c80bfa610b5b4542f32a8a0d5447a12fb1366d7f01cc44a0220573a954c4518331561406f90300e8f3358f51928d43c212a8caed02de67eebee0121025476c2e83188368da1ff3e292e7acafcdb3566bb0ad253f62fc70f07aeee635711000000",
   "hex"
 );
 
+// https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki#p2sh-p2wpkh
 const p2sh_p2wpkh = Buffer.from(
-  "0100000001db6b1b20aa0fd7b23880be2ecbd4a98130974cf4748fb66092ac4d3ceb1a54770100000000feffffff02b8b4eb0b000000001976a914a457b684d7f0d539a46a45bbc043f35b59d0d96388ac0008af2f000000001976a914fd270b1ee6abcaea97fea7ad0402e8bd8ad6d77c88ac92040000",
+  "01000000000101db6b1b20aa0fd7b23880be2ecbd4a98130974cf4748fb66092ac4d3ceb1a5477010000001716001479091972186c449eb1ded22b78e40d009bdf0089feffffff02b8b4eb0b000000001976a914a457b684d7f0d539a46a45bbc043f35b59d0d96388ac0008af2f000000001976a914fd270b1ee6abcaea97fea7ad0402e8bd8ad6d77c88ac02473044022047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794d12d482f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb012103ad1d8e89212f0b92c74d23bb710c00662ad1470198ac48c43f7d6f93a2a2687392040000",
   "hex"
 );
 
@@ -218,10 +225,11 @@ bdbd4bb7152ae";
   describe(".sigHashSegwit()", () => {
     it("p2wpkh", async () => {
       const tx = Tx.parse(bufToStream(p2wpkhBuf));
+      tx.txIns[1].prevTxValue = 600000000n; // override the value so no fetch is required
       const witness = Script.parse(
         streamFromHex("1976a9141d0f172a0ecb48aee1be1f2687d2963ae33f71a188ac")
       );
-      const result = await tx.sigHashSegwit(1, undefined, witness, 600000000n);
+      const result = await tx.sigHashSegwit(1, undefined, witness);
       expect(result.toString("hex")).to.equal(
         "c37af31116d1b27caf68aae9e3ac82f1477929014d5b917657d0eb49478cb670"
       );
@@ -229,15 +237,11 @@ bdbd4bb7152ae";
 
     it("p2sh-p2wpkh", async () => {
       const tx = Tx.parse(bufToStream(p2sh_p2wpkh));
+      tx.txIns[0].prevTxValue = 1000000000n; // override the value so no fetch is required
       const redeemScript = Script.parse(
         streamFromHex("16001479091972186c449eb1ded22b78e40d009bdf0089")
       );
-      const result = await tx.sigHashSegwit(
-        0,
-        redeemScript,
-        undefined,
-        1000000000n
-      );
+      const result = await tx.sigHashSegwit(0, redeemScript);
       expect(result.toString("hex")).to.equal(
         "64f3b0f4dd2bb3aa1ce8566d220cc74dda9df97d8490cc81d89d735c92e59fb6"
       );
@@ -267,8 +271,27 @@ d3b11400000000001976a914904a49878c0adfc3aa05de7afad2cc15f483a56a88ac7f40090000\
 a914ba35042cfe9fc66fd35ac2224eebdafd1028ad2788acdc4ace020000000017a91474d691da\
 1574e6b3c192ecfb52cc8984ee7b6c568700000000";
       const txStream = new TestStream(Buffer.from(rawTx, "hex"));
-      const tx = await Tx.parse(txStream, false);
+      const tx = Tx.parse(txStream, false);
       expect(await tx.verifyInput(0)).to.equal(true);
+    });
+
+    it("p2wpkh input", async () => {
+      const tx = Tx.parse(bufToStream(p2wpkhBuf));
+      tx.txIns[1].prevTxValue = 600000000n;
+      tx.txIns[1].prevTxScriptPubKey = p2wpkhScript(
+        Buffer.from("141d0f172a0ecb48aee1be1f2687d2963ae33f71a1", "hex")
+      );
+      const result = await tx.verifyInput(1);
+      expect(result).to.equal(true);
+    });
+
+    it("p2sh-p2wpkh input", async () => {
+      const pk = new PrivateKey(0xeb696a065ef48a2192da5b28b694f87544b30fae8327c4510137a922f32c6dcfn); // prettier-ignore
+      const tx = Tx.parse(bufToStream(p2sh_p2wpkh));
+      tx.txIns[0].prevTxValue = 1000000000n;
+      tx.txIns[0].prevTxScriptPubKey = p2shScript(p2wpkhScript(pk.point.hash160(true)).hash160()); // prettier-ignore
+      const result = await tx.verifyInput(0);
+      expect(result).to.equal(true);
     });
   });
 
