@@ -166,7 +166,6 @@ export class Script {
           (cmds[1] as Buffer).length === 20 &&
           cmds[2] === OpCode.OP_EQUAL
         ) {
-          console.log("detected p2sh");
           // execute OP_HASH160
           cmds.shift();
           if (!opHash160(stack)) {
@@ -224,11 +223,13 @@ export class Script {
 
     // fails if there is nothing left on the stack
     if (stack.length === 0) {
+      // LOG FAILURE
       return false;
     }
 
     // the stack will store a false value as an empty byte array
     if (Buffer.alloc(0).equals(stack.pop())) {
+      // LOG FAILURE
       return false;
     }
 

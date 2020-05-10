@@ -11,6 +11,8 @@ import {
   p2msSig,
   p2shSig,
   p2wpkhScript,
+  p2wpkhWitness,
+  p2wpkhSig,
 } from "../../src/script/ScriptFactories";
 import { combine, combineLE } from "../../src/util/BufferUtil";
 import { bigFromBuf } from "../../src/util/BigIntUtil";
@@ -68,8 +70,6 @@ describe("Script", () => {
       const result = combined.evaluate(z);
       expect(result).to.equal(true);
     });
-
-    it("evaluates p2pk", async () => {});
 
     it("evaluates p2pkh", async () => {
       const z = Buffer.alloc(32);
@@ -138,6 +138,35 @@ describe("Script", () => {
 
       const script = scriptSig.add(scriptPubKey);
       const result = script.evaluate(Buffer.alloc(0));
+      expect(result).to.equal(true);
+    });
+
+    it("evaluates p2wpkh", async () => {
+      const p = new PrivateKey(1n);
+      const z = Buffer.alloc(32);
+      const sig = p.sign(bigFromBuf(z));
+      const witness = p2wpkhWitness(sig, p.point);
+
+      const scriptPubKey = p2wpkhScript(p.point.hash160(true));
+      const scriptSig = p2wpkhSig();
+
+      const script = scriptSig.add(scriptPubKey);
+      const result = script.evaluate(z, witness);
+      expect(result).to.equal(true);
+    });
+
+    it("evaluates p2sh-p2wpkh", async () => {
+      const p = new PrivateKey(1n);
+      const z = Buffer.alloc(32);
+      const sig = p.sign(bigFromBuf(z));
+      const witness = p2wpkhWitness(sig, p.point);
+      const redeemScript = p2wpkhScript(p.point.hash160(true));
+
+      const scriptPubKey = p2shScript(redeemScript.hash160());
+      const scriptSig = p2shSig(redeemScript);
+
+      const script = scriptSig.add(scriptPubKey);
+      const result = script.evaluate(z, witness);
       expect(result).to.equal(true);
     });
   });
