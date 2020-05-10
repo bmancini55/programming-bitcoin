@@ -10,6 +10,7 @@ import { opEqual } from "./operations/bitwise/OpEqual";
 import { opVerify } from "./operations/flowcontrol/OpVerify";
 import { hash160 } from "../util/Hash160";
 import { p2shAddress, p2pkhAddress } from "../util/Address";
+import { p2pkhScript } from "./ScriptFactories";
 
 /**
  *
@@ -87,8 +88,9 @@ export class Script {
   /**
    * Evaluates the script
    * @param z hash of transaction information
+   * @param witness witness data provided for Segwit transactions
    */
-  public evaluate(z: Buffer): boolean {
+  public evaluate(z: Buffer, witness?: ScriptCmd[]): boolean {
     const cmds = this.cmds.slice();
     const stack = [];
     const altstack = [];
@@ -164,6 +166,7 @@ export class Script {
           (cmds[1] as Buffer).length === 20 &&
           cmds[2] === OpCode.OP_EQUAL
         ) {
+          console.log("detected p2sh");
           // execute OP_HASH160
           cmds.shift();
           if (!opHash160(stack)) {
@@ -193,6 +196,28 @@ export class Script {
           const redeemScriptBuf = combine(encodeVarint(cmd.length), cmd);
           const redeemScript = Script.parse(bufToStream(redeemScriptBuf));
           cmds.push(...redeemScript.cmds);
+        }
+
+        // Check for the P2WPKH pattern. This pattern pushes two items onto
+        // the stack OP_0 and OP_PUSHBYTES_20 which is the h160 for the p2pkh
+        // transaction. If this pattern is found, then we want to mutate the
+        // commands with a P2PKH script pub key with the provided h160 value.
+        else if (
+          stack.length === 2 &&
+          (stack[0] as Buffer).length === 0 &&
+          (stack[1] as Buffer).length === 20
+        ) {
+          // pop the hash and the op_0 off the stack
+          const h160 = stack.pop();
+          stack.pop();
+
+          // push the witness data onto the commands, which will include two
+          // values: <sig>, <pubkey>
+          cmds.push(...witness);
+
+          // create a P2PKH script using the h160 (pubkey) that was provided
+          // in the original script_pubkey
+          cmds.push(...p2pkhScript(h160).cmds);
         }
       }
     }
@@ -227,7 +252,7 @@ export class Script {
    * Serializes the Script into a Buffer
    */
   public serialize(): Buffer {
-    const scriptData = this.rawSerialize();
+    const scriptData = this.serializeCmds();
     const scriptDataLen = encodeVarint(BigInt(scriptData.length));
     return combine(scriptDataLen, scriptData);
   }
@@ -235,7 +260,7 @@ export class Script {
   /**
    * Serializes the Operations and Elements in the script stack
    */
-  private rawSerialize(): Buffer {
+  public serializeCmds(): Buffer {
     const results: Buffer[] = [];
     for (const op of this.cmds) {
       // operations are just an integer
@@ -292,10 +317,11 @@ export class Script {
   }
 
   /**
-   * Returns the hash160 for the script. This is useful for the p2sh methods
+   * Returns the hash160 of the serialized commands. This method is useful
+   * for P2SH transactions
    */
   public hash160(): Buffer {
-    return hash160(this.serialize());
+    return hash160(this.serializeCmds());
   }
 
   /**

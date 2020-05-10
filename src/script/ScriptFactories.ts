@@ -167,7 +167,7 @@ export function p2shScript(h160: Buffer): Script {
 export function p2shSig(redeemScript: Script, ...cmds: ScriptCmd[]): Script {
   return new Script([
     ...cmds,
-    redeemScript.serialize(),
+    redeemScript.serializeCmds(),
   ]); // prettier-ignore
 }
 

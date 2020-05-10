@@ -27,13 +27,13 @@ describe("AddressUtils", () => {
     it("mainnet", () => {
       const h160 = new Script([OpCode.OP_1]).hash160();
       const address = p2shAddress(h160, false);
-      expect(address).to.to.equal("3L2ckhFeDbHBvR61oH9kMHmQBhhAdH2byv");
+      expect(address).to.to.equal("3MaB7QVq3k4pQx3BhsvEADgzQonLSBwMdj");
     });
 
     it("testnet", () => {
       const h160 = new Script([OpCode.OP_1]).hash160();
       const address = p2shAddress(h160, true);
-      expect(address).to.to.equal("2NBappSBfq3nY8CiZUQmcyEkfQ3uLPU1EC2");
+      expect(address).to.to.equal("2ND8PB9RrfCaAcjfjP1Y6nAgFd9zWHYX4DN");
     });
   });
 

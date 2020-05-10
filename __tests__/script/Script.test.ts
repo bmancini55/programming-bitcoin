@@ -65,7 +65,7 @@ describe("Script", () => {
         ]); // prettier-ignore
 
       const combined = scriptSig.add(scriptPubKey);
-      const result = await combined.evaluate(z);
+      const result = combined.evaluate(z);
       expect(result).to.equal(true);
     });
 
@@ -78,7 +78,7 @@ describe("Script", () => {
       const scriptPubKey = p2pkhScript(p1.point.hash160(true));
       const scriptSig = p2pkhSig(sig.der(), p1.point.sec(true));
       const script = scriptSig.add(scriptPubKey);
-      const result = await script.evaluate(z);
+      const result = script.evaluate(z);
       expect(result).to.equal(true);
     });
 
@@ -100,7 +100,7 @@ describe("Script", () => {
       const scriptSig = p2msSig(sig1.der(), sig2.der());
 
       const script = scriptSig.add(scriptPubKey);
-      const result = await script.evaluate(z);
+      const result = script.evaluate(z);
       expect(result).to.equal(true);
     });
 
@@ -121,7 +121,7 @@ describe("Script", () => {
       const scriptSig = p2shSig(redeemScript, ...p2msSig(sig2.der()).cmds);
 
       const script = scriptSig.add(scriptSig);
-      const result = await script.evaluate(z);
+      const result = script.evaluate(z);
       expect(result).to.equal(true);
     });
 
@@ -137,7 +137,7 @@ describe("Script", () => {
       const scriptSig = p2shSig(redeemScript, OpCode.OP_2);
 
       const script = scriptSig.add(scriptPubKey);
-      const result = await script.evaluate(Buffer.alloc(0));
+      const result = script.evaluate(Buffer.alloc(0));
       expect(result).to.equal(true);
     });
   });
@@ -199,7 +199,7 @@ describe("Script", () => {
       const p2pkh = p2pkhScript(p1.point.hash160());
       const p2sh = p2shScript(p2pkh.hash160());
       expect(p2sh.address(true)).to.equal(
-        "2N1CKkS4q22M5RgSBRmFwHYVNqNmLuf94c9"
+        "2MxS5Dm2PNheCL3Cw6EZdrVSmsqMZKgetqS"
       );
     });
   });
