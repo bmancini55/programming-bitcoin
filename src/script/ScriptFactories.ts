@@ -3,6 +3,8 @@ import { OpCode } from "./OpCode";
 import { combineLE } from "../util/BufferUtil";
 import { ScriptCmd } from "./ScriptCmd";
 import { encodeVarint } from "../util/Varint";
+import { S256Point } from "../ecc/S256Point";
+import { Signature } from "../ecc/Signature";
 
 /**
  * Creates the p2pkh scriptPubKey from a Hash160 of a public key point
@@ -56,7 +58,7 @@ export function p2pkhScript(h160: Buffer): Script {
  */
 export function p2pkhSig(sig: Buffer, pubkey: Buffer): Script {
   return new Script([
-    combineLE(sig, 0x1),
+    combineLE(sig, 0x01),
     pubkey
   ]); // prettier-ignore
 }
@@ -172,7 +174,8 @@ export function p2shSig(redeemScript: Script, ...cmds: ScriptCmd[]): Script {
 }
 
 /**
- * Creats a p2wpkh ScriptPubKey
+ * Creats a p2wpkh ScriptPubKey. The h160 should be the h160 for the compressed
+ * public key.
  *
  * @remakrs
  * OP_0
@@ -185,4 +188,26 @@ export function p2wpkhScript(h160: Buffer): Script {
     OpCode.OP_0,
     h160
   ]); // prettier-ignore
+}
+
+/**
+ * Creates a p2wpkh ScripSig which is empty!
+ */
+export function p2wpkhSig(): Script {
+  return new Script();
+}
+
+/**
+ * P2WPKH witness data is the same as P2PKH ScriptSig information. In this
+ * case it includes:
+ *    DER encoded signature + 1-byte hash type
+ *    SEC encoded compressed public key
+ * @param sig
+ * @param pubkey
+ */
+export function p2wpkhWitness(sig: Signature, pubkey: S256Point): ScriptCmd[] {
+  return [
+    combineLE(sig.der(), 0x01), // add SIGHASH_ALL byte
+    pubkey.sec(true),
+  ];
 }

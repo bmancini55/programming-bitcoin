@@ -5,6 +5,8 @@ import {
   p2msScript,
   p2shScript,
   p2wpkhScript,
+  p2wpkhSig,
+  p2wpkhWitness,
 } from "../../src/script/ScriptFactories";
 import { bigFromBuf } from "../../src/util/BigIntUtil";
 import { Script } from "../../src/script/Script";
@@ -55,12 +57,34 @@ describe("ScriptFactories", () => {
     });
   });
 
-  describe(".p2wshScript()", () => {
+  describe(".p2wpkhScript()", () => {
     it("serialzies", () => {
       const h160 = hash160(Buffer.from("test"));
       const script = p2wpkhScript(h160);
       expect(script.serialize().toString("hex")).to.equal(
         "160014cebaa98c19807134434d107b0d3e5692a516ea66"
+      );
+    });
+  });
+
+  describe(".p2wpkhSig()", () => {
+    it("serializes", () => {
+      const script = p2wpkhSig();
+      expect(script.serialize().toString("hex")).to.equal("00");
+    });
+  });
+
+  describe(".p2wpkhWitness()", () => {
+    it("serializes", () => {
+      const p = new PrivateKey(1n);
+      const z = Buffer.alloc(32);
+      const sig = p.sign(bigFromBuf(z));
+      const script = p2wpkhWitness(sig, p.point);
+      expect((script[0] as Buffer).toString("hex")).to.equal(
+        "3044022054c5a5a495fd7fe1c4ffe650760a6993a8642d04d943c3d9b21955f8011d634c0220048ddb960ee0f757602a526486d74f84cebabd14ee5f6aa9da1b2e102f62e7b001"
+      );
+      expect((script[1] as Buffer).toString("hex")).to.equal(
+        "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
       );
     });
   });
