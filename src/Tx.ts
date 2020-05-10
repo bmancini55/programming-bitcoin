@@ -357,16 +357,19 @@ export class Tx {
 
     let scriptCode: Buffer;
 
-    // p2wpkh
+    // p2wsh - the scriptCode is the witnessScript serialized as scripts inside CTxOut
     if (witnessScript) {
       scriptCode = witnessScript.serialize();
     }
     // p2sh-p2wpkh
     else if (redeemScript) {
       scriptCode = p2pkhLock(redeemScript.cmds[1] as Buffer).serialize();
-    } else {
+    }
+    // p2wpkh - 0x1976a914{20-byte-pubkey-hash}88ac
+    else {
       const prevScriptPubKey = await vin.scriptPubKey(this.testnet);
-      scriptCode = p2pkhLock(prevScriptPubKey.cmds[1] as Buffer).serialize();
+      const pkh160 = prevScriptPubKey.cmds[1] as Buffer;
+      scriptCode = p2pkhLock(pkh160).serialize();
     }
 
     const value = bigToBufLE(await vin.value(), 8);
@@ -463,12 +466,12 @@ export class Tx {
    */
   public async verifyInput(i: number): Promise<boolean> {
     const vin = this.txIns[i];
-    const pubKey = await vin.scriptPubKey(this.testnet);
+    const scriptPubKey = await vin.scriptPubKey(this.testnet);
     let z: Buffer;
     let witness: ScriptCmd[];
 
-    // p2sh / p2nwpk / p2nwsh
-    if (pubKey.isP2SHLock()) {
+    // p2sh / p2sh-p2wpk / p2sh-p2wsh
+    if (scriptPubKey.isP2SHLock()) {
       // extract the redeem script from the last command in ScriptSig
       const redeemBytes = vin.scriptSig.cmds[
         vin.scriptSig.cmds.length - 1
@@ -485,9 +488,24 @@ export class Tx {
         )
       );
 
-      // p2nwpkh
+      // p2sh-p2wpkh
       if (redeemScript.isP2WPKHLock()) {
         z = await this.sigHashSegwit(i, redeemScript);
+        witness = vin.witness;
+      }
+
+      // p2sh-p2wsh
+      else if (redeemScript.isP2WSHLock()) {
+        const witnessScriptBuf = vin.witness[vin.witness.length - 1] as Buffer;
+        const witnessScript = Script.parse(
+          bufToStream(
+            combine(
+              encodeVarint(Number(witnessScriptBuf.length)),
+              witnessScriptBuf
+            )
+          )
+        );
+        z = await this.sigHashSegwit(i, undefined, witnessScript);
         witness = vin.witness;
       }
 
@@ -499,8 +517,23 @@ export class Tx {
     }
 
     // p2wpkh
-    else if (pubKey.isP2WPKHLock()) {
+    else if (scriptPubKey.isP2WPKHLock()) {
       z = await this.sigHashSegwit(i);
+      witness = vin.witness;
+    }
+
+    // p2wsh
+    else if (scriptPubKey.isP2WSHLock()) {
+      const witnessScriptBuf = vin.witness[vin.witness.length - 1] as Buffer;
+      const witnessScript = Script.parse(
+        bufToStream(
+          combine(
+            encodeVarint(Number(witnessScriptBuf.length)),
+            witnessScriptBuf
+          )
+        )
+      );
+      z = await this.sigHashSegwit(i, undefined, witnessScript);
       witness = vin.witness;
     }
 
@@ -511,7 +544,7 @@ export class Tx {
     }
 
     // combine scriptsig + scriptpubkey
-    const combined = vin.scriptSig.add(pubKey);
+    const combined = vin.scriptSig.add(scriptPubKey);
 
     // evaluate combined script
     return combined.evaluate(z, witness);
