@@ -4,9 +4,9 @@ import { Tx } from "../src/Tx";
 import { TxIn } from "../src/TxIn";
 import { TxOut } from "../src/TxOut";
 import {
-  p2pkhScript,
-  p2wpkhScript,
-  p2shScript,
+  p2pkhLock,
+  p2wpkhLock,
+  p2shLock,
   p2wpkhWitness,
 } from "../src/script/ScriptFactories";
 import { PrivateKey } from "../src/ecc/PrivateKey";
@@ -279,7 +279,7 @@ a914ba35042cfe9fc66fd35ac2224eebdafd1028ad2788acdc4ace020000000017a91474d691da\
     it("p2wpkh input", async () => {
       const tx = Tx.parse(bufToStream(p2wpkhBuf));
       tx.txIns[1].prevTxValue = 600000000n;
-      tx.txIns[1].prevTxScriptPubKey = p2wpkhScript(
+      tx.txIns[1].prevTxScriptPubKey = p2wpkhLock(
         Buffer.from("141d0f172a0ecb48aee1be1f2687d2963ae33f71a1", "hex")
       );
       const result = await tx.verifyInput(1);
@@ -290,7 +290,7 @@ a914ba35042cfe9fc66fd35ac2224eebdafd1028ad2788acdc4ace020000000017a91474d691da\
       const pk = new PrivateKey(0xeb696a065ef48a2192da5b28b694f87544b30fae8327c4510137a922f32c6dcfn); // prettier-ignore
       const tx = Tx.parse(bufToStream(p2sh_p2wpkh));
       tx.txIns[0].prevTxValue = 1000000000n;
-      tx.txIns[0].prevTxScriptPubKey = p2shScript(p2wpkhScript(pk.point.hash160(true)).hash160()); // prettier-ignore
+      tx.txIns[0].prevTxScriptPubKey = p2shLock(p2wpkhLock(pk.point.hash160(true)).hash160()); // prettier-ignore
       const result = await tx.verifyInput(0);
       expect(result).to.equal(true);
     });
@@ -332,10 +332,10 @@ a914ba35042cfe9fc66fd35ac2224eebdafd1028ad2788acdc4ace020000000017a91474d691da\
       );
 
       const add1 = "mrz1DDxeqypyabBs8N9y3Hybe2LEz2cYBu";
-      const out1 = new TxOut(900n, p2pkhScript(decodeAddress(add1).hash));
+      const out1 = new TxOut(900n, p2pkhLock(decodeAddress(add1).hash));
 
       const add2 = "myKLpz45CSfJzWbcXtammgHmNRZsnk2ocv";
-      const out2 = new TxOut(11010000n, p2pkhScript(decodeAddress(add2).hash));
+      const out2 = new TxOut(11010000n, p2pkhLock(decodeAddress(add2).hash));
 
       const tx = new Tx(2n);
       tx.testnet = true;

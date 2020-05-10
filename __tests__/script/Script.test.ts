@@ -4,15 +4,15 @@ import { TestStream } from "../TestStream";
 import { OpCode } from "../../src/script/OpCode";
 import { PrivateKey } from "../../src/ecc/PrivateKey";
 import {
-  p2msScript,
-  p2pkhScript,
-  p2shScript,
-  p2pkhSig,
-  p2msSig,
-  p2shSig,
-  p2wpkhScript,
+  p2msLock,
+  p2pkhLock,
+  p2shLock,
+  p2pkhUnlock,
+  p2msUnlock,
+  p2shUnlock,
+  p2wpkhLock,
   p2wpkhWitness,
-  p2wpkhSig,
+  p2wpkhUnlock,
 } from "../../src/script/ScriptFactories";
 import { combine, combineLE } from "../../src/util/BufferUtil";
 import { bigFromBuf } from "../../src/util/BigIntUtil";
@@ -75,8 +75,8 @@ describe("Script", () => {
       const z = Buffer.alloc(32);
       const p1 = new PrivateKey(1n);
       const sig = p1.sign(bigFromBuf(z));
-      const scriptPubKey = p2pkhScript(p1.point.hash160(true));
-      const scriptSig = p2pkhSig(sig.der(), p1.point.sec(true));
+      const scriptPubKey = p2pkhLock(p1.point.hash160(true));
+      const scriptSig = p2pkhUnlock(sig.der(), p1.point.sec(true));
       const script = scriptSig.add(scriptPubKey);
       const result = script.evaluate(z);
       expect(result).to.equal(true);
@@ -87,7 +87,7 @@ describe("Script", () => {
       const p2 = new PrivateKey(2n);
       const m = 2n;
       const n = 2n;
-      const scriptPubKey = p2msScript(
+      const scriptPubKey = p2msLock(
         m,
         n,
         p1.point.sec(true),
@@ -97,7 +97,7 @@ describe("Script", () => {
       const z = Buffer.alloc(32);
       const sig1 = p1.sign(bigFromBuf(z));
       const sig2 = p2.sign(bigFromBuf(z));
-      const scriptSig = p2msSig(sig1.der(), sig2.der());
+      const scriptSig = p2msUnlock(sig1.der(), sig2.der());
 
       const script = scriptSig.add(scriptPubKey);
       const result = script.evaluate(z);
@@ -109,7 +109,7 @@ describe("Script", () => {
       const p2 = new PrivateKey(2n);
       const m = 1n;
       const n = 2n;
-      const redeemScript = p2msScript(
+      const redeemScript = p2msLock(
         m,
         n,
         p1.point.sec(true),
@@ -118,7 +118,10 @@ describe("Script", () => {
 
       const z = Buffer.alloc(32);
       const sig2 = p2.sign(bigFromBuf(z));
-      const scriptSig = p2shSig(redeemScript, ...p2msSig(sig2.der()).cmds);
+      const scriptSig = p2shUnlock(
+        redeemScript,
+        ...p2msUnlock(sig2.der()).cmds
+      );
 
       const script = scriptSig.add(scriptSig);
       const result = script.evaluate(z);
@@ -133,8 +136,8 @@ describe("Script", () => {
         OpCode.OP_4,
         OpCode.OP_EQUAL,
       ]);
-      const scriptPubKey = p2shScript(redeemScript.hash160());
-      const scriptSig = p2shSig(redeemScript, OpCode.OP_2);
+      const scriptPubKey = p2shLock(redeemScript.hash160());
+      const scriptSig = p2shUnlock(redeemScript, OpCode.OP_2);
 
       const script = scriptSig.add(scriptPubKey);
       const result = script.evaluate(Buffer.alloc(0));
@@ -147,8 +150,8 @@ describe("Script", () => {
       const sig = p.sign(bigFromBuf(z));
       const witness = p2wpkhWitness(sig, p.point);
 
-      const scriptPubKey = p2wpkhScript(p.point.hash160(true));
-      const scriptSig = p2wpkhSig();
+      const scriptPubKey = p2wpkhLock(p.point.hash160(true));
+      const scriptSig = p2wpkhUnlock();
 
       const script = scriptSig.add(scriptPubKey);
       const result = script.evaluate(z, witness);
@@ -160,10 +163,10 @@ describe("Script", () => {
       const z = Buffer.alloc(32);
       const sig = p.sign(bigFromBuf(z));
       const witness = p2wpkhWitness(sig, p.point);
-      const redeemScript = p2wpkhScript(p.point.hash160(true));
+      const redeemScript = p2wpkhLock(p.point.hash160(true));
 
-      const scriptPubKey = p2shScript(redeemScript.hash160());
-      const scriptSig = p2shSig(redeemScript);
+      const scriptPubKey = p2shLock(redeemScript.hash160());
+      const scriptSig = p2shUnlock(redeemScript);
 
       const script = scriptSig.add(scriptPubKey);
       const result = script.evaluate(z, witness);
@@ -174,13 +177,13 @@ describe("Script", () => {
   describe(".isP2shScriptPubKey", () => {
     it("false when not p2sh script pub key", () => {
       const p1 = new PrivateKey(1n);
-      const script = p2pkhScript(p1.point.hash160());
+      const script = p2pkhLock(p1.point.hash160());
       expect(script.isP2shScriptPubKey()).to.equal(false);
     });
 
     it("true when p2sh script pub key", () => {
       const script = new Script([OpCode.OP_2]);
-      const scriptPubKey = p2shScript(script.hash160());
+      const scriptPubKey = p2shLock(script.hash160());
       expect(scriptPubKey.isP2shScriptPubKey()).to.equal(true);
     });
   });
@@ -189,13 +192,13 @@ describe("Script", () => {
     it("false when not p2pkh script pub key", () => {
       const p1 = new PrivateKey(1n);
       const script = new Script([OpCode.OP_2]);
-      const scriptPubKey = p2shScript(script.hash160());
+      const scriptPubKey = p2shLock(script.hash160());
       expect(scriptPubKey.isP2pkhScriptPubKey()).to.equal(false);
     });
 
     it("true when p2pkh script pub key", () => {
       const p1 = new PrivateKey(1n);
-      const script = p2pkhScript(p1.point.hash160());
+      const script = p2pkhLock(p1.point.hash160());
       expect(script.isP2pkhScriptPubKey()).to.equal(true);
     });
   });
@@ -203,13 +206,13 @@ describe("Script", () => {
   describe(".isP2wpkhScriptPubKey", () => {
     it("false when not p2wpkh script pub key", () => {
       const p1 = new PrivateKey(1n);
-      const script = p2pkhScript(p1.point.hash160());
+      const script = p2pkhLock(p1.point.hash160());
       expect(script.isP2wpkhScriptPubKey()).to.equal(false);
     });
 
     it("true when p2wpkh script pub key", () => {
       const p1 = new PrivateKey(1n);
-      const script = p2wpkhScript(p1.point.hash160());
+      const script = p2wpkhLock(p1.point.hash160());
       expect(script.isP2wpkhScriptPubKey()).to.equal(true);
     });
   });
@@ -217,7 +220,7 @@ describe("Script", () => {
   describe(".address()", () => {
     it("p2pkh", () => {
       const p1 = new PrivateKey(1n);
-      const script = p2pkhScript(p1.point.hash160());
+      const script = p2pkhLock(p1.point.hash160());
       expect(script.address(true)).to.equal(
         "mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r"
       );
@@ -225,8 +228,8 @@ describe("Script", () => {
 
     it("p2sh", () => {
       const p1 = new PrivateKey(1n);
-      const p2pkh = p2pkhScript(p1.point.hash160());
-      const p2sh = p2shScript(p2pkh.hash160());
+      const p2pkh = p2pkhLock(p1.point.hash160());
+      const p2sh = p2shLock(p2pkh.hash160());
       expect(p2sh.address(true)).to.equal(
         "2MxS5Dm2PNheCL3Cw6EZdrVSmsqMZKgetqS"
       );

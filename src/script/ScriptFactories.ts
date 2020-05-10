@@ -26,7 +26,7 @@ import { Signature } from "../ecc/Signature";
  * ```
  * @param h160
  */
-export function p2pkhScript(h160: Buffer): Script {
+export function p2pkhLock(h160: Buffer): Script {
   return new Script([
     OpCode.OP_DUP,
     OpCode.OP_HASH160,
@@ -56,7 +56,7 @@ export function p2pkhScript(h160: Buffer): Script {
  * @param sig DER encoded signature
  * @param pubkey SEC encoded public key in either compressed or uncompressed format
  */
-export function p2pkhSig(sig: Buffer, pubkey: Buffer): Script {
+export function p2pkhUnlock(sig: Buffer, pubkey: Buffer): Script {
   return new Script([
     combineLE(sig, 0x01),
     pubkey
@@ -85,7 +85,7 @@ export function p2pkhSig(sig: Buffer, pubkey: Buffer): Script {
  * @param n
  * @param pubkeys
  */
-export function p2msScript(m: bigint, n: bigint, ...pubkeys: Buffer[]): Script {
+export function p2msLock(m: bigint, n: bigint, ...pubkeys: Buffer[]): Script {
   return new Script([
     0x50 + Number(m),
     ...pubkeys,
@@ -113,7 +113,7 @@ export function p2msScript(m: bigint, n: bigint, ...pubkeys: Buffer[]): Script {
  * ```
  * @param sigs DER encoded signatures
  */
-export function p2msSig(...sigs: Buffer[]): Script {
+export function p2msUnlock(...sigs: Buffer[]): Script {
   return new Script([
     OpCode.OP_0,
     ...sigs.map(sig => combineLE(sig, 0x01))
@@ -137,7 +137,7 @@ export function p2msSig(...sigs: Buffer[]): Script {
  * ```
  * @param h160 hash160 of the script
  */
-export function p2shScript(h160: Buffer): Script {
+export function p2shLock(h160: Buffer): Script {
   return new Script([
     OpCode.OP_HASH160,
     h160,
@@ -166,7 +166,7 @@ export function p2shScript(h160: Buffer): Script {
  * @param redeemScript redeems script that has the hash160 matching the scriptPubKey
  * @param cmds zero or more commands needed to unlock the redeemScript
  */
-export function p2shSig(redeemScript: Script, ...cmds: ScriptCmd[]): Script {
+export function p2shUnlock(redeemScript: Script, ...cmds: ScriptCmd[]): Script {
   return new Script([
     ...cmds,
     redeemScript.serializeCmds(),
@@ -183,7 +183,7 @@ export function p2shSig(redeemScript: Script, ...cmds: ScriptCmd[]): Script {
  *
  * @param h160
  */
-export function p2wpkhScript(h160: Buffer): Script {
+export function p2wpkhLock(h160: Buffer): Script {
   return new Script([
     OpCode.OP_0,
     h160
@@ -193,7 +193,7 @@ export function p2wpkhScript(h160: Buffer): Script {
 /**
  * Creates a p2wpkh ScripSig which is empty!
  */
-export function p2wpkhSig(): Script {
+export function p2wpkhUnlock(): Script {
   return new Script();
 }
 

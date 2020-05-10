@@ -1,11 +1,11 @@
 import { expect } from "chai";
 import { PrivateKey } from "../../src/ecc/PrivateKey";
 import {
-  p2pkhScript,
-  p2msScript,
-  p2shScript,
-  p2wpkhScript,
-  p2wpkhSig,
+  p2pkhLock,
+  p2msLock,
+  p2shLock,
+  p2wpkhLock,
+  p2wpkhUnlock,
   p2wpkhWitness,
   p2wshLock,
   p2wshUnlock,
@@ -13,31 +13,30 @@ import {
 } from "../../src/script/ScriptFactories";
 import { bigFromBuf } from "../../src/util/BigIntUtil";
 import { Script } from "../../src/script/Script";
-import { combine } from "../../src/util/BufferUtil";
 import { OpCode } from "../../src/script/OpCode";
 import { hash160 } from "../../src/util/Hash160";
 
 describe("ScriptFactories", () => {
-  describe("p2pkhScript", () => {
+  describe("p2pkhLock", () => {
     it("serializes", () => {
       const h160 = Buffer.from(
         "d52ad7ca9b3d096a38e752c2018e6fbc40cdf26f",
         "hex"
       );
-      const result = p2pkhScript(h160);
+      const result = p2pkhLock(h160);
       expect(result.serialize().toString("hex")).to.equal(
         "1976a914d52ad7ca9b3d096a38e752c2018e6fbc40cdf26f88ac"
       );
     });
   });
 
-  describe("p2msScript", () => {
+  describe("p2msUnlock", () => {
     it("serializes", () => {
       const p1 = new PrivateKey(1n);
       const p2 = new PrivateKey(2n);
       const m = 2n;
       const n = 2n;
-      const scriptPubKey = p2msScript(
+      const scriptPubKey = p2msLock(
         m,
         n,
         p1.point.sec(true),
@@ -50,29 +49,29 @@ describe("ScriptFactories", () => {
     });
   });
 
-  describe(".p2shScript()", () => {
+  describe(".p2shLock()", () => {
     it("serializes", () => {
       const h160 = hash160(Buffer.from("test"));
-      const script = p2shScript(h160);
+      const script = p2shLock(h160);
       expect(script.serialize().toString("hex")).to.equal(
         "17a914cebaa98c19807134434d107b0d3e5692a516ea6687"
       );
     });
   });
 
-  describe(".p2wpkhScript()", () => {
+  describe(".p2wpkhLock()", () => {
     it("serialzies", () => {
       const h160 = hash160(Buffer.from("test"));
-      const script = p2wpkhScript(h160);
+      const script = p2wpkhLock(h160);
       expect(script.serialize().toString("hex")).to.equal(
         "160014cebaa98c19807134434d107b0d3e5692a516ea66"
       );
     });
   });
 
-  describe(".p2wpkhSig()", () => {
+  describe(".p2wpkhUnlock()", () => {
     it("serializes", () => {
-      const script = p2wpkhSig();
+      const script = p2wpkhUnlock();
       expect(script.serialize().toString("hex")).to.equal("00");
     });
   });

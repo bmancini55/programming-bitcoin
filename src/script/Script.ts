@@ -10,7 +10,7 @@ import { opEqual } from "./operations/bitwise/OpEqual";
 import { opVerify } from "./operations/flowcontrol/OpVerify";
 import { hash160 } from "../util/Hash160";
 import { p2shAddress, p2pkhAddress } from "../util/Address";
-import { p2pkhScript } from "./ScriptFactories";
+import { p2pkhLock } from "./ScriptFactories";
 import { sha256 } from "../util/Sha256";
 
 /**
@@ -217,7 +217,7 @@ export class Script {
 
           // create a P2PKH script using the h160 (pubkey) that was provided
           // in the original script_pubkey
-          cmds.push(...p2pkhScript(h160).cmds);
+          cmds.push(...p2pkhLock(h160).cmds);
         }
       }
     }

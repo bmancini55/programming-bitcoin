@@ -14,7 +14,7 @@ import { Script } from "./script/Script";
 import { PrivateKey } from "./ecc/PrivateKey";
 import { ScriptCmd } from "./script/ScriptCmd";
 import { OpCode } from "./script/OpCode";
-import { p2pkhScript } from "./script/ScriptFactories";
+import { p2pkhLock } from "./script/ScriptFactories";
 
 export class Tx {
   public version: bigint;
@@ -363,10 +363,10 @@ export class Tx {
     }
     // p2sh-p2wpkh
     else if (redeemScript) {
-      scriptCode = p2pkhScript(redeemScript.cmds[1] as Buffer).serialize();
+      scriptCode = p2pkhLock(redeemScript.cmds[1] as Buffer).serialize();
     } else {
       const prevScriptPubKey = await vin.scriptPubKey(this.testnet);
-      scriptCode = p2pkhScript(prevScriptPubKey.cmds[1] as Buffer).serialize();
+      scriptCode = p2pkhLock(prevScriptPubKey.cmds[1] as Buffer).serialize();
     }
 
     const value = bigToBufLE(await vin.value(), 8);
