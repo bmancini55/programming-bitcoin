@@ -10,7 +10,7 @@ import { opEqual } from "./operations/bitwise/OpEqual";
 import { opVerify } from "./operations/flowcontrol/OpVerify";
 import { hash160 } from "../util/Hash160";
 import { p2shAddress, p2pkhAddress } from "../util/Address";
-import { p2pkhLock } from "./ScriptFactories";
+import { p2pkhLock, p2shLock } from "./ScriptFactories";
 import { sha256 } from "../util/Sha256";
 
 /**
@@ -219,6 +219,43 @@ export class Script {
           // in the original script_pubkey
           cmds.push(...p2pkhLock(h160).cmds);
         }
+
+        // Check for the P2WSH pattern. This pattern pushes two items onto
+        // the stack OP_0 and OP_PUSHBYTES_32 which is the sha256 of the
+        // redeem script for the transaction. If this pattern is found, then
+        // we load onto the command set the P2SH script and push the unlock
+        // information and redeem script from the witness data.
+        else if (
+          stack.length === 2 &&
+          (stack[0] as Buffer).length === 0 &&
+          (stack[1] as Buffer).length === 32
+        ) {
+          // pop the sha256 hash and op_0 off the stack
+          const s256 = stack.pop() as Buffer;
+          stack.pop();
+
+          // get the redeem script
+          const redeemScriptBuf = witness.pop() as Buffer;
+
+          // ensure the redeemScript matches the sha256 provided
+          if (!redeemScriptBuf || !s256.equals(sha256(redeemScriptBuf))) {
+            // LOG ERROR
+            return false;
+          }
+
+          // push the remaining witness data onto the command stack,
+          // unlock information followed by the redeem script
+          cmds.push(...witness);
+
+          // convert the raw redeem script into commands
+          const redeemScriptLen = redeemScriptBuf.length;
+          const redeemScript = Script.parse(
+            bufToStream(combine(encodeVarint(redeemScriptLen), redeemScriptBuf))
+          );
+
+          // push the redeem script onto the commands for execution...
+          cmds.push(...redeemScript.cmds);
+        }
       }
     }
 
@@ -276,7 +313,7 @@ export class Script {
       // elements will be represented as a buffer of information
       // and we will use the length to determine how to encode it
       else if (op instanceof Buffer) {
-        // between 1 and 75 bytes are just directly pushed as
+        // between 1 and 75 bytes are OP_PUSHBYTES_XX
         // there is no op_code for these. We first need to push
         // the length of the buffer arrray though as the operation
         if (op.length >= 1 && op.length <= 75) {

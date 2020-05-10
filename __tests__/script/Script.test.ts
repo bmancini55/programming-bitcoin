@@ -14,6 +14,8 @@ import {
   p2wpkhWitness,
   p2wpkhUnlock,
   p2wshLock,
+  p2wshUnlock,
+  p2wshWitness,
 } from "../../src/script/ScriptFactories";
 import { combine, combineLE } from "../../src/util/BufferUtil";
 import { bigFromBuf } from "../../src/util/BigIntUtil";
@@ -171,6 +173,21 @@ describe("Script", () => {
 
       const script = scriptSig.add(scriptPubKey);
       const result = script.evaluate(z, witness);
+      expect(result).to.equal(true);
+    });
+
+    it("evaluates p2wsh", async () => {
+      const redeemScript = new Script([
+        OpCode.OP_1ADD,
+        OpCode.OP_5,
+        OpCode.OP_EQUAL,
+      ]);
+      const scriptPubKey = p2wshLock(redeemScript.sha256());
+      const scriptSig = p2wshUnlock();
+      const witness = p2wshWitness(redeemScript, OpCode.OP_4);
+
+      const combined = scriptSig.add(scriptPubKey);
+      const result = combined.evaluate(Buffer.alloc(0), witness);
       expect(result).to.equal(true);
     });
   });
