@@ -13,6 +13,7 @@ import {
   p2wpkhLock,
   p2wpkhWitness,
   p2wpkhUnlock,
+  p2wshLock,
 } from "../../src/script/ScriptFactories";
 import { combine, combineLE } from "../../src/util/BufferUtil";
 import { bigFromBuf } from "../../src/util/BigIntUtil";
@@ -174,49 +175,6 @@ describe("Script", () => {
     });
   });
 
-  describe(".isP2shScriptPubKey", () => {
-    it("false when not p2sh script pub key", () => {
-      const p1 = new PrivateKey(1n);
-      const script = p2pkhLock(p1.point.hash160());
-      expect(script.isP2shScriptPubKey()).to.equal(false);
-    });
-
-    it("true when p2sh script pub key", () => {
-      const script = new Script([OpCode.OP_2]);
-      const scriptPubKey = p2shLock(script.hash160());
-      expect(scriptPubKey.isP2shScriptPubKey()).to.equal(true);
-    });
-  });
-
-  describe(".isP2pkhScriptPubkey", () => {
-    it("false when not p2pkh script pub key", () => {
-      const p1 = new PrivateKey(1n);
-      const script = new Script([OpCode.OP_2]);
-      const scriptPubKey = p2shLock(script.hash160());
-      expect(scriptPubKey.isP2pkhScriptPubKey()).to.equal(false);
-    });
-
-    it("true when p2pkh script pub key", () => {
-      const p1 = new PrivateKey(1n);
-      const script = p2pkhLock(p1.point.hash160());
-      expect(script.isP2pkhScriptPubKey()).to.equal(true);
-    });
-  });
-
-  describe(".isP2wpkhScriptPubKey", () => {
-    it("false when not p2wpkh script pub key", () => {
-      const p1 = new PrivateKey(1n);
-      const script = p2pkhLock(p1.point.hash160());
-      expect(script.isP2wpkhScriptPubKey()).to.equal(false);
-    });
-
-    it("true when p2wpkh script pub key", () => {
-      const p1 = new PrivateKey(1n);
-      const script = p2wpkhLock(p1.point.hash160());
-      expect(script.isP2wpkhScriptPubKey()).to.equal(true);
-    });
-  });
-
   describe(".address()", () => {
     it("p2pkh", () => {
       const p1 = new PrivateKey(1n);
@@ -233,6 +191,63 @@ describe("Script", () => {
       expect(p2sh.address(true)).to.equal(
         "2MxS5Dm2PNheCL3Cw6EZdrVSmsqMZKgetqS"
       );
+    });
+  });
+
+  describe(".isP2SHLock()", () => {
+    it("false when not p2sh script pub key", () => {
+      const p1 = new PrivateKey(1n);
+      const script = p2pkhLock(p1.point.hash160());
+      expect(script.isP2SHLock()).to.equal(false);
+    });
+
+    it("true when p2sh script pub key", () => {
+      const script = new Script([OpCode.OP_2]);
+      const scriptPubKey = p2shLock(script.hash160());
+      expect(scriptPubKey.isP2SHLock()).to.equal(true);
+    });
+  });
+
+  describe(".isP2PKHLock", () => {
+    it("false when not p2pkh script pub key", () => {
+      const p1 = new PrivateKey(1n);
+      const script = new Script([OpCode.OP_2]);
+      const scriptPubKey = p2shLock(script.hash160());
+      expect(scriptPubKey.isP2PKHLock()).to.equal(false);
+    });
+
+    it("true when p2pkh script pub key", () => {
+      const p1 = new PrivateKey(1n);
+      const script = p2pkhLock(p1.point.hash160());
+      expect(script.isP2PKHLock()).to.equal(true);
+    });
+  });
+
+  describe(".isP2WPKHLock", () => {
+    it("false when not p2wpkh script pub key", () => {
+      const p1 = new PrivateKey(1n);
+      const script = p2pkhLock(p1.point.hash160());
+      expect(script.isP2WPKHLock()).to.equal(false);
+    });
+
+    it("true when p2wpkh script pub key", () => {
+      const p1 = new PrivateKey(1n);
+      const script = p2wpkhLock(p1.point.hash160());
+      expect(script.isP2WPKHLock()).to.equal(true);
+    });
+  });
+
+  describe(".isP2WSHLock", () => {
+    it("false when not P2WSH script pub key", () => {
+      const p1 = new PrivateKey(1n);
+      const script = p2wpkhLock(p1.point.hash160());
+      expect(script.isP2WSHLock()).to.equal(false);
+    });
+
+    it("true when p2wsh script pub key", () => {
+      const redeemScript = new Script([OpCode.OP_1]);
+      const script = p2wshLock(redeemScript.sha256());
+      expect(script.isP2WSHLock()).to.equal(true);
     });
   });
 });

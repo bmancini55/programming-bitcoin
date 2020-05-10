@@ -177,7 +177,7 @@ export function p2shUnlock(redeemScript: Script, ...cmds: ScriptCmd[]): Script {
  * Creats a p2wpkh ScriptPubKey. The h160 should be the h160 for the compressed
  * public key.
  *
- * @remakrs
+ * @remarks
  * OP_0
  * OP_PUSHBYTES_20 <h160>
  *
@@ -215,6 +215,14 @@ export function p2wpkhWitness(sig: Signature, pubkey: S256Point): ScriptCmd[] {
 /**
  * Creates a p2wsh ScriptPubKey. The s256 should be the sha256 of the redeem
  * script.
+ *
+ * @remarks
+ * Operations:
+ * ```
+ * OP_0
+ * OP_PUSHBYTES_32 <sha56_redeem_script>
+ * ```
+ *
  * @param s256 sha256 of the redeem script
  */
 export function p2wshLock(s256: Buffer): Script {

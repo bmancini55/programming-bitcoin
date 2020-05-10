@@ -468,7 +468,7 @@ export class Tx {
     let witness: ScriptCmd[];
 
     // p2sh / p2nwpk / p2nwsh
-    if (pubKey.isP2shScriptPubKey()) {
+    if (pubKey.isP2SHLock()) {
       // extract the redeem script from the last command in ScriptSig
       const redeemBytes = vin.scriptSig.cmds[
         vin.scriptSig.cmds.length - 1
@@ -486,7 +486,7 @@ export class Tx {
       );
 
       // p2nwpkh
-      if (redeemScript.isP2wpkhScriptPubKey()) {
+      if (redeemScript.isP2WPKHLock()) {
         z = await this.sigHashSegwit(i, redeemScript);
         witness = vin.witness;
       }
@@ -499,7 +499,7 @@ export class Tx {
     }
 
     // p2wpkh
-    else if (pubKey.isP2wpkhScriptPubKey()) {
+    else if (pubKey.isP2WPKHLock()) {
       z = await this.sigHashSegwit(i);
       witness = vin.witness;
     }

@@ -342,9 +342,9 @@ export class Script {
    * @param testnet
    */
   public address(testnet: boolean = false): string {
-    if (this.isP2shScriptPubKey()) {
+    if (this.isP2SHLock()) {
       return p2shAddress(this.hash160(), testnet);
-    } else if (this.isP2pkhScriptPubKey()) {
+    } else if (this.isP2PKHLock()) {
       return p2pkhAddress(this.cmds[2] as Buffer, testnet);
     }
   }
@@ -357,7 +357,7 @@ export class Script {
    *  <hash 20-bytes>
    *  OP_EQUAL
    */
-  public isP2shScriptPubKey(): boolean {
+  public isP2SHLock(): boolean {
     return (
       this.cmds.length === 3 &&
       this.cmds[0] === OpCode.OP_HASH160 &&
@@ -368,15 +368,17 @@ export class Script {
 
   /**
    * Returns true if the script matches the pattern for a P2PKH script pubkey
-   * which has 4 elements:
+   * which has five elements:
    *
+   * ```
    * OP_DUP
    * OP_HASH160
    * OP_PUSHBYTES_20 <hash>
    * OP_EQUALVERIFY,
    * OP_CHECKSIG
+   * ```
    */
-  public isP2pkhScriptPubKey(): boolean {
+  public isP2PKHLock(): boolean {
     return (
       this.cmds.length === 5 &&
       this.cmds[0] === OpCode.OP_DUP &&
@@ -391,14 +393,32 @@ export class Script {
    * Returns true if the ScriptPubKey matches the pattern for a P2WPKH script
    * which has 2 elements:
    *
+   * ```
    * OP_0
-   * OP_PUSHBYTES_20 <h160>
+   * OP_PUSHBYTES_20 <h160_pub_key>
+   * ```
    */
-  public isP2wpkhScriptPubKey(): boolean {
+  public isP2WPKHLock(): boolean {
     return (
       this.cmds.length === 2 &&
       this.cmds[0] === OpCode.OP_0 &&
       (this.cmds[1] as Buffer).length === 20
+    );
+  }
+
+  /**
+   * Returns true if the script matches the P2SH ScriptPubKey pattern:
+   *
+   * ```
+   * OP_0
+   * OP_PUSHBYTES_32 <sha256 redeem script>
+   * ```
+   */
+  public isP2WSHLock(): boolean {
+    return (
+      this.cmds.length === 2 &&
+      this.cmds[0] === OpCode.OP_0 &&
+      (this.cmds[1] as Buffer).length === 32
     );
   }
 }
