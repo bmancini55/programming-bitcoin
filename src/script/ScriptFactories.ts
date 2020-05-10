@@ -213,17 +213,17 @@ export function p2wpkhWitness(sig: Signature, pubkey: S256Point): ScriptCmd[] {
 }
 
 /**
- * Creates a p2wsh ScriptPubKey. The s256 should be the sha256 of the redeem
+ * Creates a p2wsh ScriptPubKey. The s256 should be the sha256 of the witness
  * script.
  *
  * @remarks
  * Operations:
  * ```
  * OP_0
- * OP_PUSHBYTES_32 <sha56_redeem_script>
+ * OP_PUSHBYTES_32 <sha56_witness_script>
  * ```
  *
- * @param s256 sha256 of the redeem script
+ * @param s256 sha256 of the witness script
  */
 export function p2wshLock(s256: Buffer): Script {
   return new Script([
@@ -242,8 +242,8 @@ export function p2wshUnlock(): Script {
 /**
  * Creates p2wsh witness data. The sha256 of the redeemScript will match
  * the value in the p2wsh ScriptPubKey
- * @param witnessScript Redeem script
- * @param cmds commands needed to unlocok redeemScript
+ * @param witnessScript Witness script
+ * @param cmds commands needed to unlock the witnessScript
  */
 export function p2wshWitness(
   witnessScript: Script,
