@@ -190,6 +190,23 @@ describe("Script", () => {
       const result = combined.evaluate(Buffer.alloc(0), witness);
       expect(result).to.equal(true);
     });
+
+    it("evaluates p2sh-p2wsh", async () => {
+      const redeemScript = new Script([
+        OpCode.OP_1ADD,
+        OpCode.OP_5,
+        OpCode.OP_EQUAL,
+      ]);
+      const witness = p2wshWitness(redeemScript, OpCode.OP_4);
+      const redeemScript2 = p2wshLock(redeemScript.sha256());
+
+      const scriptPubKey = p2shLock(redeemScript2.hash160());
+      const scriptSig = p2shUnlock(redeemScript2);
+
+      const combined = scriptSig.add(scriptPubKey);
+      const result = combined.evaluate(Buffer.alloc(0), witness);
+      expect(result).to.equal(true);
+    });
   });
 
   describe(".address()", () => {

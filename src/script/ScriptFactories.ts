@@ -242,15 +242,15 @@ export function p2wshUnlock(): Script {
 /**
  * Creates p2wsh witness data. The sha256 of the redeemScript will match
  * the value in the p2wsh ScriptPubKey
- * @param redeemScript Redeem script
+ * @param witnessScript Redeem script
  * @param cmds commands needed to unlocok redeemScript
  */
 export function p2wshWitness(
-  redeemScript: Script,
+  witnessScript: Script,
   ...cmds: ScriptCmd[]
 ): ScriptCmd[] {
   return [
     ...cmds,
-    redeemScript.serializeCmds(),
+    witnessScript.serializeCmds(),
   ]; // prettier-ignore
 }
