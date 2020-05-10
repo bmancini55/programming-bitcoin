@@ -211,3 +211,38 @@ export function p2wpkhWitness(sig: Signature, pubkey: S256Point): ScriptCmd[] {
     pubkey.sec(true),
   ];
 }
+
+/**
+ * Creates a p2wsh ScriptPubKey. The s256 should be the sha256 of the redeem
+ * script.
+ * @param s256 sha256 of the redeem script
+ */
+export function p2wshLock(s256: Buffer): Script {
+  return new Script([
+    OpCode.OP_0,
+    s256
+  ]); // prettier-ignore
+}
+
+/**
+ * Creates a p2wsh ScriptSig, which is empty
+ */
+export function p2wshUnlock(): Script {
+  return new Script();
+}
+
+/**
+ * Creates p2wsh witness data. The sha256 of the redeemScript will match
+ * the value in the p2wsh ScriptPubKey
+ * @param redeemScript Redeem script
+ * @param cmds commands needed to unlocok redeemScript
+ */
+export function p2wshWitness(
+  redeemScript: Script,
+  ...cmds: ScriptCmd[]
+): ScriptCmd[] {
+  return [
+    ...cmds,
+    redeemScript.serializeCmds(),
+  ]; // prettier-ignore
+}

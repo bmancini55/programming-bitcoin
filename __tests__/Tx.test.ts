@@ -7,6 +7,7 @@ import {
   p2pkhScript,
   p2wpkhScript,
   p2shScript,
+  p2wpkhWitness,
 } from "../src/script/ScriptFactories";
 import { PrivateKey } from "../src/ecc/PrivateKey";
 import { decodeAddress } from "../src/util/Address";

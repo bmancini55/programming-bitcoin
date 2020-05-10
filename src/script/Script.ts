@@ -11,6 +11,7 @@ import { opVerify } from "./operations/flowcontrol/OpVerify";
 import { hash160 } from "../util/Hash160";
 import { p2shAddress, p2pkhAddress } from "../util/Address";
 import { p2pkhScript } from "./ScriptFactories";
+import { sha256 } from "../util/Sha256";
 
 /**
  *
@@ -323,6 +324,14 @@ export class Script {
    */
   public hash160(): Buffer {
     return hash160(this.serializeCmds());
+  }
+
+  /**
+   * Returns the sha256 hash of the serialized commands. This methodo is useful
+   * for P2WSH transactions.
+   */
+  public sha256(): Buffer {
+    return sha256(this.serializeCmds());
   }
 
   /**

@@ -7,6 +7,9 @@ import {
   p2wpkhScript,
   p2wpkhSig,
   p2wpkhWitness,
+  p2wshLock,
+  p2wshUnlock,
+  p2wshWitness,
 } from "../../src/script/ScriptFactories";
 import { bigFromBuf } from "../../src/util/BigIntUtil";
 import { Script } from "../../src/script/Script";
@@ -86,6 +89,36 @@ describe("ScriptFactories", () => {
       expect((script[1] as Buffer).toString("hex")).to.equal(
         "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
       );
+    });
+  });
+
+  describe(".p2wshLock", () => {
+    it("serializes", () => {
+      const redeemScript = new Script([OpCode.OP_1]);
+      const script = p2wshLock(redeemScript.sha256());
+      expect(script.serializeCmds().toString("hex")).to.equal(
+        "00204ae81572f06e1b88fd5ced7a1a000945432e83e1551e6f721ee9c00b8cc33260"
+      );
+    });
+  });
+
+  describe(".p2wshUnlock()", () => {
+    it("serializes", () => {
+      const script = p2wshUnlock();
+      expect(script.serializeCmds().toString("hex")).to.equal("");
+    });
+  });
+
+  describe(".p2wshWitness", () => {
+    it("serializes", () => {
+      const redeemScript = new Script([
+        OpCode.OP_1ADD,
+        OpCode.OP_5,
+        OpCode.OP_EQUAL,
+      ]);
+      const witness = p2wshWitness(redeemScript, OpCode.OP_4);
+      expect(witness[0] as number).to.equal(OpCode.OP_4);
+      expect((witness[1] as Buffer).length).to.equal(3);
     });
   });
 });
